@@ -1,15 +1,18 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
-import { User as UserIcon, Lock, Bell, HelpCircle, LogOut, ChevronRight, Hash, MapPin, Phone, X, Save } from 'lucide-react';
+import { User as UserIcon, Lock, Bell, HelpCircle, LogOut, ChevronRight, Hash, MapPin, Phone, X, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 interface ProfileViewProps {
   user: User;
   onLogout: () => void;
+  onUpdatePassword: (newPass: string) => void;
 }
 
-const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
+const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdatePassword }) => {
   const [showChangePass, setShowChangePass] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -20,14 +23,24 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
     { id: 'help', icon: HelpCircle, label: 'Hỗ trợ 24/7', color: 'text-green-500', action: () => {} }
   ];
 
-  const handleUpdatePass = () => {
+  const handleUpdatePassRequest = () => {
+    if (oldPass !== user.password) return alert("Mật khẩu hiện tại không chính xác");
     if (newPass !== confirmPass) return alert("Mật khẩu xác nhận không khớp");
     if (newPass.length < 6) return alert("Mật khẩu mới phải từ 6 ký tự");
-    alert("Yêu cầu đổi mật khẩu đã được gửi!");
+    
+    // Hiển thị modal xác nhận ngay trên màn hình hiện tại
+    setShowConfirmModal(true);
+  };
+
+  const finalizeUpdate = () => {
+    // 1. Cập nhật mật khẩu trong state/localStorage
+    onUpdatePassword(newPass);
+    setShowConfirmModal(false);
     setShowChangePass(false);
-    setOldPass('');
-    setNewPass('');
-    setConfirmPass('');
+    
+    // 2. Thông báo thành công & Đăng xuất ngay lập tức
+    alert("Thay đổi mật khẩu thành công! Hệ thống sẽ đưa bạn về trang Đăng nhập.");
+    onLogout();
   };
 
   return (
@@ -56,7 +69,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
             </div>
             <div className="flex-1">
                <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Số CCCD Hệ thống</p>
-               <p className="text-sm font-black text-white">{user.cccd.replace(/(\d{4})(\d{4})(\d{4})/, '$1 **** ****')}</p>
+               <p className="text-sm font-black text-white">{user.cccd}</p>
             </div>
          </div>
          <div className="flex items-center gap-4">
@@ -100,7 +113,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
       </button>
 
       {showChangePass && (
-        <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-6">
+        <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-6 overflow-y-auto backdrop-blur-md">
            <div className="flex justify-between items-center mb-10">
               <h3 className="text-xl font-black uppercase text-[#FF8C1A]">Thay đổi mật khẩu</h3>
               <button onClick={() => setShowChangePass(false)} className="p-3 bg-white/5 rounded-full"><X size={24}/></button>
@@ -138,15 +151,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout }) => {
                  />
               </div>
 
+              <div className="bg-[#FF8C1A]/10 p-5 rounded-3xl border border-[#FF8C1A]/20 flex gap-4">
+                 <AlertCircle size={20} className="text-[#FF8C1A] shrink-0" />
+                 <p className="text-[10px] text-gray-400 font-bold leading-relaxed uppercase">
+                    Hệ thống yêu cầu xác nhận trước khi cập nhật. Phiên làm việc sẽ kết thúc ngay để bảo mật v37.
+                 </p>
+              </div>
+
               <button 
-                onClick={handleUpdatePass}
-                className="w-full py-5 bg-[#FF8C1A] text-black font-black text-sm uppercase rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all mt-4"
+                onClick={handleUpdatePassRequest}
+                className="w-full py-5 bg-[#FF8C1A] text-black font-black text-sm uppercase rounded-2xl shadow-[0_15px_30px_rgba(255,140,26,0.3)] flex items-center justify-center gap-3 active:scale-95 transition-all mt-4"
               >
                 <Save size={18} /> Lưu thay đổi
               </button>
            </div>
         </div>
       )}
+
+      {/* Confirmation Modal - Sẽ luôn nằm trên cùng nhờ z-index [1000] */}
+      <ConfirmationModal 
+        isOpen={showConfirmModal}
+        title="Xác nhận đổi mật khẩu"
+        message="Bạn chắc chắn muốn thay đổi mật khẩu? Hệ thống sẽ đăng xuất tài khoản để áp dụng mật khẩu mới ngay sau khi lưu."
+        onConfirm={finalizeUpdate}
+        onCancel={() => setShowConfirmModal(false)}
+      />
 
       <p className="text-[10px] text-center text-gray-700 uppercase font-black tracking-widest pb-6">VNV MONEY PRO v37</p>
     </div>

@@ -39,6 +39,7 @@ export interface Loan {
   id: string; // VNV-DDMMYY-XXX
   userId: string;
   userName: string;
+  userCccd: string; // Lưu CCCD tại thời điểm ký
   amount: number;
   status: LoanStatus;
   requestedAt: string;

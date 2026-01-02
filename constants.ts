@@ -44,14 +44,20 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
 };
 
 export const INITIAL_SYSTEM_BUDGET = {
-  total: 50000000,
+  total: 20000000, // Updated to 20 million as per request
   disbursed: 0,
-  remaining: 50000000,
+  remaining: 20000000,
   finesCollected: 0
 };
 
 export const FORMAT_CURRENCY = (val: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+};
+
+// Helper for formatted input (dots every 3 digits)
+export const FORMAT_INPUT_NUMBER = (val: string) => {
+  const num = val.replace(/\D/g, '');
+  return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
 export const MOCK_IP = "192.168.1.105";
