@@ -33,21 +33,26 @@ export interface User {
   joinedAt: string;
   password?: string;
   isVerified: boolean;
+  settlementProgress: number;
+  // Thông tin tham chiếu mới
+  refZaloNumber?: string;
+  refRelationship?: string;
 }
 
 export interface Loan {
-  id: string; // VNV-DDMMYY-XXX
+  id: string; 
   userId: string;
   userName: string;
-  userCccd: string; // Lưu CCCD tại thời điểm ký
+  userCccd: string; 
   amount: number;
   status: LoanStatus;
   requestedAt: string;
   disbursedAt?: string;
   settledAt?: string;
-  fineRate: number; // 0.1% per day
+  fineRate: number; 
   accruedFine: number;
-  signatureData?: string; // Base64 signature
+  signatureData?: string; 
+  aiCreditScore?: number;
 }
 
 export interface TierRequest {

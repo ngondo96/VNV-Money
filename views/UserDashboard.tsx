@@ -1,8 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
-import { User, Loan, SystemBudget, LoanStatus } from '../types';
+import React, { useEffect, useState, useRef } from 'react';
+import { User, Loan, SystemBudget, LoanStatus, UserTier } from '../types';
 import { FORMAT_CURRENCY } from '../constants';
-import { CreditCard, Clock, AlertCircle, FileText, Zap, RefreshCw, ShieldCheck, TrendingUp, History, Landmark, Percent, Activity } from 'lucide-react';
+import { CreditCard, Clock, AlertCircle, FileText, Zap, RefreshCw, ShieldCheck, TrendingUp, History, Landmark, Percent, Activity, Award, Star, TrendingDown } from 'lucide-react';
 
 interface UserDashboardProps {
   user: User;
@@ -12,21 +12,39 @@ interface UserDashboardProps {
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) => {
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showUpgradeCeleb, setShowUpgradeCeleb] = useState(false);
+  const prevTierRef = useRef<UserTier>(user.tier);
   
   useEffect(() => {
-    // Luôn hiển thị popup sau khi Dashboard được mount (sau login hoặc refresh trang)
     setShowWelcome(true);
   }, []);
+
+  useEffect(() => {
+    // Detect auto-upgrade tier change
+    if (prevTierRef.current !== user.tier) {
+      const tiers = Object.values(UserTier);
+      const oldIdx = tiers.indexOf(prevTierRef.current);
+      const newIdx = tiers.indexOf(user.tier);
+      
+      if (newIdx > oldIdx) {
+        setShowUpgradeCeleb(true);
+      }
+      prevTierRef.current = user.tier;
+    }
+  }, [user.tier]);
 
   const disbursedLoans = loans.filter(l => l.status === LoanStatus.DISBURSED);
   const settledLoans = loans.filter(l => l.status === LoanStatus.SETTLED);
   
-  const currentDebt = disbursedLoans.reduce((acc, curr) => acc + curr.amount + curr.accruedFine, 0);
+  const currentDebt = disbursedLoans.reduce((acc, curr) => acc + curr.amount + (curr.accruedFine || 0), 0);
   const totalBorrowed = loans.filter(l => l.status !== LoanStatus.REJECTED && l.status !== LoanStatus.REQUESTED)
                             .reduce((acc, curr) => acc + curr.amount, 0);
-  const totalPaid = settledLoans.reduce((acc, curr) => acc + curr.amount + curr.accruedFine, 0);
+  const totalPaid = settledLoans.reduce((acc, curr) => acc + curr.amount + (curr.accruedFine || 0), 0);
 
   const historyLoans = [...loans].sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+
+  // Kiểm tra trễ hạn cho UI
+  const isOverdue = new Date().getDate() > 27 && disbursedLoans.length > 0;
 
   const getStatusStyle = (status: LoanStatus) => {
     switch (status) {
@@ -37,6 +55,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
       default: return 'bg-orange-500';
     }
   };
+
+  const getNextTierName = () => {
+    const tiers = Object.values(UserTier);
+    const idx = tiers.indexOf(user.tier);
+    return idx < tiers.length - 1 ? tiers[idx + 1] : null;
+  };
+
+  const nextTier = getNextTierName();
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-6 duration-700 pb-10">
@@ -66,6 +92,51 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
         </div>
         <div className="absolute -right-12 -top-12 w-48 h-48 bg-white/20 rounded-full blur-[60px] pointer-events-none"></div>
       </div>
+
+      {/* TIER UPGRADE PROGRESS BAR */}
+      {nextTier && (
+        <div className={`mx-2 bg-[#1A1A1A] border ${isOverdue ? 'border-red-500/50' : 'border-orange-500/20'} rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden transition-colors`}>
+           <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                 <div className={`w-10 h-10 ${isOverdue ? 'bg-red-500/10' : 'bg-orange-500/10'} rounded-2xl flex items-center justify-center`}>
+                    {isOverdue ? <TrendingDown size={20} className="text-red-500" /> : <TrendingUp size={20} className="text-orange-500" />}
+                 </div>
+                 <div>
+                    <h3 className={`text-[11px] font-black uppercase tracking-widest ${isOverdue ? 'text-red-500' : 'text-white'}`}>
+                      {isOverdue ? 'Tín dụng cảnh báo' : 'Tiến trình nâng hạng'}
+                    </h3>
+                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">Lên hạng {nextTier}</p>
+                 </div>
+              </div>
+              <div className="text-right">
+                 <span className={`text-lg font-black ${isOverdue ? 'text-red-500' : 'text-[#FF8C1A]'}`}>{user.settlementProgress}/10</span>
+                 <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Lần thanh toán</p>
+              </div>
+           </div>
+           
+           <div className="w-full h-3 bg-black rounded-full overflow-hidden p-[2px] border border-gray-800">
+              <div 
+                className={`h-full ${isOverdue ? 'bg-red-600' : 'bg-gradient-to-r from-orange-600 to-[#FF8C1A]'} rounded-full transition-all duration-1000 relative`}
+                style={{ width: `${(user.settlementProgress / 10) * 100}%` }}
+              >
+                 <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+           </div>
+
+           <div className="mt-4 flex items-center gap-2">
+              <div className={`p-1.5 ${isOverdue ? 'bg-red-500/10' : 'bg-green-500/10'} rounded-lg`}>
+                 {isOverdue ? <AlertCircle size={12} className="text-red-500" /> : <ShieldCheck size={12} className="text-green-500" />}
+              </div>
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">
+                {isOverdue ? (
+                  <>Đang <span className="text-red-500 font-black">trễ hạn</span>. Mỗi ngày trừ 01 điểm. Về 0 sẽ bị <span className="text-white">xuống hạng</span>.</>
+                ) : (
+                  <>Còn <span className="text-white font-black">{10 - user.settlementProgress} lần</span> thanh toán đúng hạn nữa để tự động nâng hạng.</>
+                )}
+              </p>
+           </div>
+        </div>
+      )}
 
       {/* Real-time System Budget Banner */}
       <div className="mx-2 px-5 py-4 bg-[#1A1A1A] border border-green-500/20 rounded-[2rem] flex items-center justify-between shadow-lg">
@@ -103,14 +174,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
            </div>
         </div>
 
-        <div className="bg-[#1A1A1A] p-5 rounded-3xl border border-gray-800 hover:border-blue-500/30 transition-all group shadow-lg">
+        <div className={`bg-[#1A1A1A] p-5 rounded-3xl border transition-all group shadow-lg ${isOverdue ? 'border-red-500/30' : 'border-gray-800'}`}>
           <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-              <CreditCard size={20} className="text-blue-500" />
+            <div className={`w-10 h-10 ${isOverdue ? 'bg-red-500/10' : 'bg-blue-500/10'} rounded-2xl flex items-center justify-center`}>
+              <CreditCard size={20} className={isOverdue ? 'text-red-500' : 'text-blue-500'} />
             </div>
           </div>
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Dư nợ hiện tại</p>
-          <p className="text-lg font-black">{FORMAT_CURRENCY(currentDebt)}</p>
+          <p className={`text-lg font-black ${isOverdue ? 'text-red-500' : ''}`}>{FORMAT_CURRENCY(currentDebt)}</p>
         </div>
 
         <div className="bg-[#1A1A1A] p-5 rounded-3xl border border-gray-800 hover:border-orange-500/30 transition-all group shadow-lg">
@@ -165,8 +236,50 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
         )}
       </div>
 
+      {/* AUTO-UPGRADE CELEBRATION MODAL */}
+      {showUpgradeCeleb && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/95 p-6 backdrop-blur-xl overflow-hidden">
+           <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+              <div className="absolute top-3/4 right-1/4 w-3 h-3 bg-[#FF8C1A] rounded-full animate-pulse"></div>
+              <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-orange-500/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2"></div>
+           </div>
+
+           <div className="bg-[#1A1A1A] border-4 border-orange-500/30 w-full max-w-sm rounded-[3.5rem] p-10 text-center relative z-10 animate-in zoom-in-90 duration-500 shadow-[0_0_100px_rgba(255,140,26,0.2)]">
+              <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-[#FF8C1A] rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                 <Award size={48} className="text-black" />
+              </div>
+              
+              <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Chúc Mừng!</h3>
+              <p className="text-[#FF8C1A] text-sm font-black uppercase tracking-widest mb-8">Nâng hạng tín dụng thành công</p>
+              
+              <div className="bg-black/50 p-6 rounded-3xl border border-gray-800 mb-10 space-y-4">
+                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-gray-500">Hạng mới</span>
+                    <span className="text-white bg-orange-500 px-3 py-1 rounded-lg text-black">{user.tier}</span>
+                 </div>
+                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-gray-500">Hạn mức mới</span>
+                    <span className="text-green-500 text-sm">{FORMAT_CURRENCY(user.limit)}</span>
+                 </div>
+              </div>
+
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed mb-10">
+                Hệ thống ghi nhận bạn đã hoàn thành <span className="text-white">10 lần thanh toán đúng hạn</span> liên tiếp. Tín nhiệm của bạn đã được nâng cấp.
+              </p>
+
+              <button 
+                onClick={() => setShowUpgradeCeleb(false)}
+                className="w-full py-5 bg-[#FF8C1A] text-black font-black rounded-2xl text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+              >
+                TUYỆT VỜI, TIẾP TỤC
+              </button>
+           </div>
+        </div>
+      )}
+
       {/* Welcome Popup */}
-      {showWelcome && (
+      {showWelcome && !showUpgradeCeleb && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-6 backdrop-blur-sm">
           <div className="bg-[#1A1A1A] border border-gray-800 w-full rounded-[3.5rem] overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_0_80px_rgba(255,140,26,0.15)]">
             <div className="p-10 text-center">

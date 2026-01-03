@@ -10,9 +10,13 @@ interface LayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
+  notifications?: {
+    admin_users?: number;
+    admin_loans?: number;
+  };
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, role, activeTab, setActiveTab, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, role, activeTab, setActiveTab, onLogout, notifications }) => {
   const userTabs = [
     { id: 'home', icon: Home, label: 'Trang chủ' },
     { id: 'loans', icon: ClipboardList, label: 'Khoản vay' },
@@ -23,8 +27,8 @@ const Layout: React.FC<LayoutProps> = ({ children, role, activeTab, setActiveTab
 
   const adminTabs = [
     { id: 'admin_dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
-    { id: 'admin_users', icon: Users, label: 'Người dùng' },
-    { id: 'admin_loans', icon: ClipboardList, label: 'Duyệt vay' },
+    { id: 'admin_users', icon: Users, label: 'Người dùng', badge: notifications?.admin_users },
+    { id: 'admin_loans', icon: ClipboardList, label: 'Duyệt vay', badge: notifications?.admin_loans },
     { id: 'admin_budget', icon: Wallet, label: 'Ngân sách' },
     { id: 'admin_logs', icon: Activity, label: 'Logs' },
     { id: 'admin_settings', icon: Settings, label: 'Hệ thống' }
@@ -55,16 +59,23 @@ const Layout: React.FC<LayoutProps> = ({ children, role, activeTab, setActiveTab
 
       {/* Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 max-w-[450px] mx-auto bg-[#1A1A1A] border-t border-gray-800 px-2 py-3 flex justify-around items-center z-50">
-        {currentTabs.map((tab) => {
+        {currentTabs.map((tab: any) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center gap-1 transition-all ${isActive ? 'text-[#FF8C1A]' : 'text-gray-500'}`}
+              className={`flex flex-col items-center gap-1 transition-all relative ${isActive ? 'text-[#FF8C1A]' : 'text-gray-500'}`}
             >
-              <Icon size={isActive ? 24 : 20} strokeWidth={isActive ? 2.5 : 2} />
+              <div className="relative">
+                <Icon size={isActive ? 24 : 20} strokeWidth={isActive ? 2.5 : 2} />
+                {tab.badge !== undefined && tab.badge > 0 && (
+                  <div className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] animate-in zoom-in duration-300">
+                    {tab.badge > 9 ? '9+' : tab.badge}
+                  </div>
+                )}
+              </div>
               <span className="text-[10px] font-medium">{tab.label}</span>
             </button>
           );

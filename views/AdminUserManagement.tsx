@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole, UserTier, TierRequest } from '../types';
-import { Search, User as UserIcon, ShieldCheck, TrendingUp, CheckCircle, XCircle, MapPin, Hash, Phone, Calendar, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, User as UserIcon, ShieldCheck, TrendingUp, CheckCircle, XCircle, MapPin, Hash, Phone, Calendar, Info, ChevronDown, ChevronUp, Users, UserPlus } from 'lucide-react';
 import { FORMAT_CURRENCY } from '../constants';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -18,7 +18,6 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
   const [modal, setModal] = useState<{ id: string; tier: UserTier; name: string; type: 'APPROVE' | 'REJECT' } | null>(null);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
-  // Chỉ hiển thị khách hàng, không hiển thị Admin
   const filteredUsers = users.filter(u => 
     u.role !== UserRole.ADMIN && 
     (u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -44,13 +43,25 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      <h2 className="text-2xl font-black tracking-tight uppercase">Quản lý Khách hàng</h2>
+      <div className="flex justify-between items-center px-1">
+        <h2 className="text-2xl font-black tracking-tight uppercase">Quản lý Khách hàng</h2>
+        <div className="flex gap-2">
+           <div className="flex items-center gap-1.5 bg-blue-600/10 text-blue-500 text-[10px] font-black px-3 py-1 rounded-full border border-blue-600/20 uppercase">
+              <Users size={12}/> {filteredUsers.length}
+           </div>
+           {pendingReqs.length > 0 && (
+             <div className="flex items-center gap-1.5 bg-orange-600 text-white text-[10px] font-black px-3 py-1 rounded-full border border-orange-600 shadow-lg shadow-orange-900/20 uppercase animate-pulse">
+                <TrendingUp size={12}/> REQ: {pendingReqs.length}
+             </div>
+           )}
+        </div>
+      </div>
 
       {/* Tier Upgrade Requests Section */}
       {pendingReqs.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-[10px] font-black text-orange-500 uppercase flex items-center gap-2 px-2 tracking-widest">
-            <TrendingUp size={14} /> Yêu cầu nâng hạng ({pendingReqs.length})
+            <TrendingUp size={14} /> Yêu cầu nâng hạng mới ({pendingReqs.length})
           </h3>
           {pendingReqs.map(req => (
             <div key={req.id} className="bg-[#1A1A1A] border-l-4 border-orange-500 p-5 rounded-2xl flex flex-col gap-4 shadow-xl">
@@ -153,6 +164,18 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
                                     <p className="text-xs font-bold text-gray-300">{user.zaloNumber}</p>
                                 </div>
                             </div>
+
+                            {/* REFERENCE INFO */}
+                            {user.refZaloNumber && (
+                              <div className="flex items-start gap-3 col-span-2 bg-orange-600/5 p-3 rounded-xl border border-orange-500/20">
+                                  <Users size={16} className="text-orange-500 mt-0.5" />
+                                  <div>
+                                      <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Tham chiếu: {user.refRelationship}</p>
+                                      <p className="text-xs font-black text-white">Zalo: {user.refZaloNumber}</p>
+                                  </div>
+                              </div>
+                            )}
+
                             <div className="flex items-start gap-3 col-span-2 bg-gray-900/50 p-3 rounded-xl border border-gray-800">
                                 <MapPin size={16} className="text-red-500 mt-0.5" />
                                 <div>

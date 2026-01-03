@@ -44,7 +44,7 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
 };
 
 export const INITIAL_SYSTEM_BUDGET = {
-  total: 20000000, // Updated to 20 million as per request
+  total: 20000000,
   disbursed: 0,
   remaining: 20000000,
   finesCollected: 0
@@ -54,11 +54,19 @@ export const FORMAT_CURRENCY = (val: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
 };
 
-// Helper for formatted input (dots every 3 digits)
+export const FORMAT_DATE_DDMMYY = (dateInput: string | Date | undefined) => {
+  if (!dateInput) return '---';
+  const d = new Date(dateInput);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear().toString().slice(-2);
+  return `${day}${month}${year}`;
+};
+
 export const FORMAT_INPUT_NUMBER = (val: string) => {
   const num = val.replace(/\D/g, '');
   return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
 export const MOCK_IP = "192.168.1.105";
-export const MOCK_DEVICE = "iPhone 15 Pro Max (v37 PRO)";
+export const MOCK_DEVICE = "iPhone 15 Pro Max (v37.2 PRO)";

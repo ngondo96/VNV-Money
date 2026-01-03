@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole, UserTier } from '../types';
-import { ShieldCheck, User as UserIcon, Lock, MapPin, Hash, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, Lock, MapPin, Hash, CheckCircle2, Users, Info, HelpCircle } from 'lucide-react';
 
 interface LoginViewProps {
   users: User[];
@@ -13,6 +13,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showRefTooltip, setShowRefTooltip] = useState(false);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -21,6 +22,10 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // New Reference Fields
+  const [refZalo, setRefZalo] = useState('');
+  const [refRelationship, setRefRelationship] = useState('Anh/Chị/Em');
 
   const handleCccdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
@@ -30,6 +35,12 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
   const handleZaloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
     if (val.length <= 10) setZalo(val);
+  };
+
+  const handleRefZaloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+    // Chặn nhập dư quá 10 số
+    if (val.length <= 10) setRefZalo(val);
   };
 
   const handleAction = (e: React.FormEvent) => {
@@ -45,13 +56,15 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
       if (cleanZalo.length !== 10) return setError("Số Zalo phải đúng 10 số");
       if (password.length < 6) return setError("Mật khẩu phải từ 6 ký tự");
       if (password !== confirmPassword) return setError("Mật khẩu xác nhận không đúng");
+      
+      // Validation for reference
+      if (refZalo.length !== 10) return setError("Số Zalo tham chiếu phải đúng 10 số");
+      if (refZalo === cleanZalo) return setError("Zalo tham chiếu không được trùng với cá nhân");
+      
       if (!agreedToTerms) return setError("Bạn phải đồng ý với điều khoản");
       
-      // KIỂM TRA TRÙNG LẶP TRÊN DANH SÁCH MỚI NHẤT TRONG PROPS
       const isDuplicate = users.some(u => u.zaloNumber === cleanZalo);
-      if (isDuplicate) {
-        return setError("Số Zalo này đã tồn tại trên hệ thống");
-      }
+      if (isDuplicate) return setError("Số Zalo này đã tồn tại trên hệ thống");
 
       const newUser: User = {
         id: `U-${Date.now()}`,
@@ -64,11 +77,13 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
         limit: 2000000,
         joinedAt: new Date().toISOString(),
         isVerified: true,
-        password: password
+        password: password,
+        settlementProgress: 0,
+        refZaloNumber: refZalo,
+        refRelationship: refRelationship
       };
       onRegister(newUser);
     } else {
-      // 1. Kiểm tra Admin mặc định
       if (cleanZalo === 'Admin' && password === '119011Ngon') {
         const admin: User = {
           id: 'ADMIN-MASTER-01',
@@ -81,15 +96,14 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
           limit: 1000000000,
           joinedAt: new Date().toISOString(),
           isVerified: true,
-          password: '119011Ngon'
+          password: '119011Ngon',
+          settlementProgress: 0
         };
         onLogin(admin);
         return;
       }
 
-      // 2. Kiểm tra User trong danh sách thực tế (users prop từ App state)
       const foundUser = users.find(u => u.zaloNumber === cleanZalo);
-      
       if (foundUser) {
         if (foundUser.password === password) {
           onLogin(foundUser);
@@ -97,19 +111,19 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
           setError("Mật khẩu không chính xác.");
         }
       } else {
-        setError("Tài khoản không tồn tại. Hệ thống đã được Reset.");
+        setError("Tài khoản không tồn tại.");
       }
     }
   };
 
   return (
-    <div className="min-h-screen p-8 flex flex-col justify-center animate-in fade-in duration-700 bg-[#0F0F0F]">
+    <div className="min-h-screen p-8 flex flex-col justify-center animate-in fade-in duration-700 bg-[#0F0F0F] pb-20">
       <div className="mb-10 flex flex-col items-center text-center">
         <div className="w-20 h-20 bg-[#FF8C1A] rounded-[1.8rem] flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(255,140,26,0.3)] border-2 border-white/10">
           <ShieldCheck size={48} className="text-black" />
         </div>
         <h1 className="text-3xl font-black text-white tracking-tighter uppercase">VNV MONEY</h1>
-        <p className="text-[#FF8C1A] text-[9px] font-black uppercase tracking-[0.2em] mt-2 bg-[#FF8C1A]/10 px-3 py-1 rounded-full border border-[#FF8C1A]/20">MASTER AUTHENTICATION v37</p>
+        <p className="text-[#FF8C1A] text-[9px] font-black uppercase tracking-[0.2em] mt-2 bg-[#FF8C1A]/10 px-3 py-1 rounded-full border border-[#FF8C1A]/20">MASTER AUTHENTICATION v37.2</p>
       </div>
 
       <form onSubmit={handleAction} className="space-y-4">
@@ -124,15 +138,27 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
               />
             </div>
 
-            <div className="relative">
-              <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-              <input 
-                type="tel"
-                inputMode="numeric"
-                value={cccd} onChange={handleCccdChange}
-                placeholder="SỐ CCCD (12 SỐ)" 
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all" required 
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
+                <input 
+                  type="tel"
+                  inputMode="numeric"
+                  value={cccd} onChange={handleCccdChange}
+                  placeholder="CCCD (12 SỐ)" 
+                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-10 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                />
+              </div>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-black text-[10px] uppercase">Zalo</div>
+                <input 
+                  type="tel"
+                  inputMode="numeric"
+                  value={zalo} onChange={handleZaloChange}
+                  placeholder="SỐ CÁ NHÂN" 
+                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                />
+              </div>
             </div>
 
             <div className="relative">
@@ -144,30 +170,64 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
               />
             </div>
 
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-black text-xs uppercase">Zalo</div>
-              <input 
-                type="tel"
-                inputMode="numeric"
-                value={zalo} onChange={handleZaloChange}
-                placeholder="SỐ ĐIỆN THOẠI" 
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-14 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all" required 
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={16} />
+                <input 
+                  type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="MẬT KHẨU" className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-10 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                />
+              </div>
+              <div className="relative">
+                <input 
+                  type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="XÁC NHẬN" className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 px-4 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                />
+              </div>
             </div>
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-              <input 
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="MẬT KHẨU" className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all" required 
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-              <input 
-                type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="XÁC NHẬN MẬT KHẨU" className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all" required 
-              />
+            {/* REFERENCE SECTION - HORIZONTAL LAYOUT */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="relative group">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                   <span className="text-gray-600 font-black text-[9px] uppercase">Ref</span>
+                   <button 
+                    type="button" 
+                    onMouseEnter={() => setShowRefTooltip(true)}
+                    onMouseLeave={() => setShowRefTooltip(false)}
+                    onClick={() => setShowRefTooltip(!showRefTooltip)}
+                    className="text-gray-600"
+                   >
+                     <HelpCircle size={10} />
+                   </button>
+                </div>
+                <input 
+                  type="tel"
+                  inputMode="numeric"
+                  value={refZalo} onChange={handleRefZaloChange}
+                  placeholder="ZALO THAM CHIẾU" 
+                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-[10px] font-bold transition-all" required 
+                />
+                {showRefTooltip && (
+                  <div className="absolute -top-12 left-0 right-0 bg-red-600 text-white text-[8px] font-black p-2 rounded-xl z-50 shadow-xl animate-in fade-in slide-in-from-bottom-2 uppercase">
+                    Cảnh báo: Thông tin tham chiếu phải chính xác để duyệt hồ sơ!
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <select 
+                  value={refRelationship} 
+                  onChange={(e) => setRefRelationship(e.target.value)}
+                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 px-4 pr-10 text-white focus:border-[#FF8C1A] outline-none text-[10px] font-bold appearance-none cursor-pointer transition-all"
+                >
+                  <option value="Anh/Chị/Em">Anh/Chị/Em</option>
+                  <option value="Vợ/Chồng">Vợ/Chồng</option>
+                  <option value="Bố/Mẹ">Bố/Mẹ</option>
+                  <option value="Đồng nghiệp">Đồng nghiệp</option>
+                  <option value="Bạn bè">Bạn bè</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600"><Users size={12}/></div>
+              </div>
             </div>
 
             <div className="flex items-start gap-3 px-2 pt-1">
@@ -179,7 +239,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                 {agreedToTerms && <div className="w-3 h-3 bg-black rounded-sm" />}
               </button>
               <p className="text-[10px] text-gray-600 font-bold leading-tight uppercase tracking-tighter">
-                Tôi xác nhận thông tin cung cấp là chính xác và đồng ý với các <span className="text-[#FF8C1A]">Điều khoản pháp lý</span> của VNV MONEY.
+                Tôi xác nhận mọi thông tin cá nhân và người tham chiếu là chính xác, đồng ý với <span className="text-[#FF8C1A]">Điều khoản pháp lý</span>.
               </p>
             </div>
           </div>
