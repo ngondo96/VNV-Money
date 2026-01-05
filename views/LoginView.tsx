@@ -14,6 +14,11 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
   const [error, setError] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showRefTooltip, setShowRefTooltip] = useState(false);
+  
+  // Warning states for length validation
+  const [showZaloWarning, setShowZaloWarning] = useState(false);
+  const [showCccdWarning, setShowCccdWarning] = useState(false);
+  const [showRefZaloWarning, setShowRefZaloWarning] = useState(false);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -54,7 +59,6 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        // Nén xuống JPEG chất lượng 0.7 để tiết kiệm dung lượng localStorage
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
     });
@@ -62,23 +66,40 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
 
   const handleCccdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
-    if (val.length <= 12) setCccd(val);
+    if (val.length <= 12) {
+      setCccd(val);
+      setShowCccdWarning(val.length > 0 && val.length < 12);
+    }
   };
 
   const handleZaloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-    if (val.length <= 10) setZalo(val);
+    let val = e.target.value;
+    
+    if (!isRegistering && val.toLowerCase().startsWith('a')) {
+        setZalo(val);
+        setShowZaloWarning(false);
+        return;
+    }
+
+    const numericVal = val.replace(/\s/g, '').replace(/\D/g, '');
+    if (numericVal.length <= 10) {
+        setZalo(numericVal);
+        setShowZaloWarning(numericVal.length > 0 && numericVal.length < 10);
+    }
   };
 
   const handleRefZaloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-    if (val.length <= 10) setRefZalo(val);
+    if (val.length <= 10) {
+      setRefZalo(val);
+      setShowRefZaloWarning(val.length > 0 && val.length < 10);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) { // Tăng giới hạn input nhưng sẽ nén xuống
+      if (file.size > 10 * 1024 * 1024) {
         setError("Dung lượng file gốc quá lớn (>10MB).");
         return;
       }
@@ -162,6 +183,10 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
         return;
       }
 
+      if (cleanZalo !== 'Admin' && cleanZalo.length !== 10) {
+          return setError("Số Zalo đăng nhập phải đúng 10 số");
+      }
+
       const foundUser = users.find(u => u.zaloNumber === cleanZalo);
       if (foundUser) {
         if (foundUser.password === password) {
@@ -207,8 +232,13 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                   inputMode="numeric"
                   value={cccd} onChange={handleCccdChange}
                   placeholder="CCCD (12 SỐ)" 
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-10 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                  className={`w-full bg-[#1A1A1A] border ${showCccdWarning ? 'border-red-500' : 'border-gray-800'} rounded-2xl py-4 pl-10 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all`} required 
                 />
+                {showCccdWarning && (
+                  <div className="absolute -top-8 left-0 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-md animate-in fade-in slide-in-from-bottom-1 uppercase z-10">
+                    Cần 12 số
+                  </div>
+                )}
               </div>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-black text-[10px] uppercase">Zalo</div>
@@ -217,8 +247,13 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                   inputMode="numeric"
                   value={zalo} onChange={handleZaloChange}
                   placeholder="SỐ CÁ NHÂN" 
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all" required 
+                  className={`w-full bg-[#1A1A1A] border ${showZaloWarning ? 'border-red-500' : 'border-gray-800'} rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-xs font-bold transition-all`} required 
                 />
+                {showZaloWarning && (
+                  <div className="absolute -top-8 left-0 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-md animate-in fade-in slide-in-from-bottom-1 uppercase z-10">
+                    Cần 10 số
+                  </div>
+                )}
               </div>
             </div>
 
@@ -249,7 +284,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
 
             {/* REFERENCE SECTION */}
             <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="relative group">
+              <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                    <span className="text-gray-600 font-black text-[9px] uppercase">Ref</span>
                    <button type="button" onMouseEnter={() => setShowRefTooltip(true)} onMouseLeave={() => setShowRefTooltip(false)} className="text-gray-600">
@@ -261,8 +296,13 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                   inputMode="numeric"
                   value={refZalo} onChange={handleRefZaloChange}
                   placeholder="ZALO THAM CHIẾU" 
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-[10px] font-bold transition-all" required 
+                  className={`w-full bg-[#1A1A1A] border ${showRefZaloWarning ? 'border-red-500' : 'border-gray-800'} rounded-2xl py-4 pl-12 pr-2 text-white focus:border-[#FF8C1A] outline-none text-[10px] font-bold transition-all`} required 
                 />
+                {showRefZaloWarning && (
+                  <div className="absolute -top-8 left-0 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-md animate-in fade-in slide-in-from-bottom-1 uppercase z-10">
+                    Cần 10 số
+                  </div>
+                )}
                 {showRefTooltip && (
                   <div className="absolute -top-12 left-0 right-0 bg-red-600 text-white text-[8px] font-black p-2 rounded-xl z-50 shadow-xl animate-in fade-in slide-in-from-bottom-2 uppercase">
                     Thông tin tham chiếu phải chính xác!
@@ -291,7 +331,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                   <p className="text-[10px] font-black text-[#FF8C1A] uppercase tracking-[0.1em] flex items-center gap-2">
                     <Camera size={14} /> Xác thực CCCD (Bắt buộc)
                   </p>
-                  <span className="text-[8px] text-gray-600 font-black uppercase">Auto-Compress Enabled</span>
+                  <span className="text-[8px] text-gray-600 font-black uppercase">Nén ảnh thông minh</span>
                </div>
                
                <div className="grid grid-cols-2 gap-4">
@@ -368,10 +408,15 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-black text-xs uppercase">Zalo</div>
               <input 
                 type="text"
-                value={zalo} onChange={(e) => setZalo(e.target.value)}
+                value={zalo} onChange={handleZaloChange}
                 placeholder="SỐ ZALO / ADMIN" 
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-14 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all" required 
+                className={`w-full bg-[#1A1A1A] border ${showZaloWarning ? 'border-red-500' : 'border-gray-800'} rounded-2xl py-4 pl-14 pr-4 text-white focus:border-[#FF8C1A] outline-none text-sm font-bold transition-all`} required 
               />
+              {showZaloWarning && (
+                <div className="absolute -top-8 left-14 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded-md animate-in fade-in slide-in-from-bottom-1 uppercase z-10">
+                  Số Zalo phải đủ 10 số
+                </div>
+              )}
             </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
@@ -394,13 +439,13 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
           disabled={(isRegistering && (!isFormComplete || processing !== null))}
           className={`w-full py-4 font-black text-lg rounded-2xl transition-all transform active:scale-[0.97] shadow-[0_10px_20px_rgba(255,140,26,0.3)] uppercase tracking-widest mt-2 ${(isRegistering && (!isFormComplete || processing !== null)) ? 'bg-gray-800 text-gray-600 cursor-not-allowed opacity-50 grayscale' : 'bg-[#FF8C1A] text-black hover:bg-[#E67E17]'}`}
         >
-          {processing ? "ĐANG XỬ LÝ ẢNH..." : isRegistering ? (isFormComplete ? "ĐĂNG KÝ NGAY" : "CẦN ĐỦ THÔNG TIN") : "ĐĂNG NHẬP"}
+          {processing ? "ĐANG NÉN ẢNH..." : isRegistering ? (isFormComplete ? "ĐĂNG KÝ NGAY" : "CẦN ĐỦ THÔNG TIN") : "ĐĂNG NHẬP"}
         </button>
 
         <div className="text-center mt-6">
           <button 
             type="button"
-            onClick={() => { setIsRegistering(!isRegistering); setError(null); }}
+            onClick={() => { setIsRegistering(!isRegistering); setError(null); setShowZaloWarning(false); setShowCccdWarning(false); setShowRefZaloWarning(false); setZalo(''); setCccd(''); setRefZalo(''); }}
             className="text-gray-600 text-[10px] font-black uppercase tracking-widest hover:text-[#FF8C1A] transition-colors"
           >
             {isRegistering ? "ĐÃ CÓ TÀI KHOẢN? ĐĂNG NHẬP" : "CHƯA CÓ TÀI KHOẢN? ĐĂNG KÝ"}

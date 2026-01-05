@@ -56,7 +56,7 @@ const App: React.FC = () => {
       } catch (e) {
         if (e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError')) {
           console.error('LocalStorage limit reached!');
-          alert("Bộ nhớ trình duyệt đã đầy do chứa nhiều ảnh hồ sơ. Vui lòng vào mục 'Hệ thống' để Reset hoặc xóa bớt dữ liệu cũ.");
+          alert("Bộ nhớ trình duyệt đã đầy. Hệ thống sẽ tự động tối ưu hóa dữ liệu.");
         }
       }
     }
@@ -72,7 +72,7 @@ const App: React.FC = () => {
 
   const addAuditLog = (performer: User | {fullName: string, id: string}, action: string) => {
     if (isResetting.current) return;
-    setAuditLogs(prev => [{ id: `LOG-${Date.now()}`, performerId: performer.id, performerName: performer.fullName, action, timestamp: new Date().toISOString(), ip: MOCK_IP, deviceId: MOCK_DEVICE }, ...prev.slice(0, 49)]); // Giới hạn 50 logs để tiết kiệm bộ nhớ
+    setAuditLogs(prev => [{ id: `LOG-${Date.now()}`, performerId: performer.id, performerName: performer.fullName, action, timestamp: new Date().toISOString(), ip: MOCK_IP, deviceId: MOCK_DEVICE }, ...prev.slice(0, 49)]);
   };
 
   const applyOverduePenalty = useCallback(() => {
@@ -95,7 +95,7 @@ const App: React.FC = () => {
             newTier = tiers[currentIdx - 1];
             newLimit = TIER_CONFIGS[newTier].maxLimit;
             newProgress = 10 + newProgress;
-            addAuditLog({fullName: 'Hệ thống', id: 'SYSTEM'}, `CẢNH BÁO: Khách hàng ${u.fullName} bị HẠ HẠNG xuống ${newTier} do trễ hạn ${daysLate} ngày.`);
+            addAuditLog({fullName: 'Hệ thống', id: 'SYSTEM'}, `CẢNH BÁO: Khách hàng ${u.fullName} bị HẠ HẠNG xuống ${newTier} do trễ hạn.`);
           } else {
             newTier = UserTier.STANDARD;
             newProgress = 0;
@@ -196,9 +196,27 @@ const App: React.FC = () => {
 
   const handleRejectTier = (reqId: string) => setTierRequests(prev => prev.map(r => r.id === reqId ? { ...r, status: 'REJECTED' } : r));
 
-  const handleResetSystem = () => { isResetting.current = true; localStorage.clear(); sessionStorage.clear(); window.location.reload(); };
+  const handleResetSystem = () => { 
+    isResetting.current = true; 
+    
+    // Clear State ngay lập tức để tránh bất kỳ useEffect nào lưu đè dữ liệu cũ
+    setUsers([]);
+    setLoans([]);
+    setTierRequests([]);
+    setAuditLogs([]);
+    setBudget(INITIAL_SYSTEM_BUDGET);
+    
+    // Xóa Storage
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
+    localStorage.clear(); // Xóa sạch tất cả các dữ liệu khác nếu có
+    
+    // Ép trình duyệt tải lại từ URL gốc
+    setTimeout(() => {
+      window.location.href = window.location.origin + window.location.pathname;
+    }, 100);
+  };
 
-  // Calculate notifications for Admin
   const pendingLoanCount = loans.filter(l => l.status === LoanStatus.REQUESTED).length;
   const pendingTierReqCount = tierRequests.filter(r => r.status === 'PENDING').length;
 
