@@ -1,6 +1,6 @@
 {
   "name": "VNV MONEY",
-  "description": "Professional loan management system v37. Features digital contract signing, AI CCCD scanning simulation, and realtime admin dashboard.",
+  "description": "Professional loan management system v37. Features digital contract signing, mandatory CCCD verification, and realtime admin dashboard.",
   "requestFramePermissions": [
     "camera"
   ]

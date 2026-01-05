@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole, UserTier, TierRequest } from '../types';
-import { Search, User as UserIcon, ShieldCheck, TrendingUp, CheckCircle, XCircle, MapPin, Hash, Phone, Calendar, Info, ChevronDown, ChevronUp, Users, UserPlus } from 'lucide-react';
+import { Search, User as UserIcon, ShieldCheck, TrendingUp, MapPin, Hash, Phone, Calendar, ChevronDown, ChevronUp, Users, ImageIcon, ExternalLink, X } from 'lucide-react';
 import { FORMAT_CURRENCY } from '../constants';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -17,6 +17,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
   const [searchTerm, setSearchTerm] = useState('');
   const [modal, setModal] = useState<{ id: string; tier: UserTier; name: string; type: 'APPROVE' | 'REJECT' } | null>(null);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   const filteredUsers = users.filter(u => 
     u.role !== UserRole.ADMIN && 
@@ -42,7 +43,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10 px-1">
       <div className="flex justify-between items-center px-1">
         <h2 className="text-2xl font-black tracking-tight uppercase">Quản lý Khách hàng</h2>
         <div className="flex gap-2">
@@ -57,7 +58,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
         </div>
       </div>
 
-      {/* Tier Upgrade Requests Section */}
+      {/* Tier Upgrade Requests */}
       {pendingReqs.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-[10px] font-black text-orange-500 uppercase flex items-center gap-2 px-2 tracking-widest">
@@ -91,11 +92,11 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
         </div>
       )}
 
-      {/* Search Bar */}
+      {/* Search */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
         <input 
-          placeholder="Tìm Tên hoặc Số Zalo khách hàng..."
+          placeholder="Tìm Tên hoặc Số Zalo..."
           className="w-full bg-[#1A1A1A] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 outline-none focus:border-[#FF8C1A] text-sm font-medium transition-all"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -105,12 +106,12 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
       {/* User List */}
       <div className="space-y-4">
         {filteredUsers.length === 0 ? (
-            <div className="text-center py-20 bg-[#1A1A1A] rounded-[2rem] border border-dashed border-gray-800 text-gray-600 text-xs font-bold uppercase tracking-widest">Không có dữ liệu khách hàng</div>
+            <div className="text-center py-20 bg-[#1A1A1A] rounded-[2rem] border border-dashed border-gray-800 text-gray-600 text-xs font-bold uppercase tracking-widest">Không có dữ liệu</div>
         ) : (
             filteredUsers.map(user => (
-            <div key={user.id} className="bg-[#1A1A1A] border border-gray-800 rounded-[2rem] overflow-hidden shadow-sm hover:border-gray-700 transition-colors">
+            <div key={user.id} className="bg-[#1A1A1A] border border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm hover:border-gray-700 transition-colors">
                 <div 
-                  className="p-5 flex items-center justify-between cursor-pointer"
+                  className="p-6 flex items-center justify-between cursor-pointer"
                   onClick={() => setExpandedUser(expandedUser === user.id ? null : user.id)}
                 >
                     <div className="flex items-center gap-4">
@@ -139,35 +140,72 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
                             <div className="flex items-start gap-3">
                                 <ShieldCheck size={16} className="text-[#FF8C1A] mt-0.5" />
                                 <div>
-                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Quyền lợi Hạng</p>
+                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Hạng Hiện Tại</p>
                                     <p className="text-xs font-black text-[#FF8C1A]">{user.tier}</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <TrendingUp size={16} className="text-[#FF8C1A] mt-0.5" />
                                 <div>
-                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Hạn mức giải ngân</p>
+                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Hạn mức tối đa</p>
                                     <p className="text-xs font-black text-white">{FORMAT_CURRENCY(user.limit)}</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <Hash size={16} className="text-blue-500 mt-0.5" />
                                 <div>
-                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Số CCCD Hệ thống</p>
+                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Số CCCD</p>
                                     <p className="text-xs font-bold text-gray-300">{user.cccd}</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <Phone size={16} className="text-green-500 mt-0.5" />
                                 <div>
-                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Zalo xác thực</p>
+                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Zalo Khách hàng</p>
                                     <p className="text-xs font-bold text-gray-300">{user.zaloNumber}</p>
                                 </div>
                             </div>
 
-                            {/* REFERENCE INFO */}
+                            {/* KYC CCCD DISPLAY SECTION */}
+                            <div className="col-span-2 space-y-3 pt-4 border-t border-gray-800/50 mt-2">
+                                <p className="text-[9px] text-[#FF8C1A] uppercase font-black tracking-widest px-1 flex items-center gap-2">
+                                  <ImageIcon size={12} /> Hồ sơ KYC (Ảnh CCCD gốc)
+                                </p>
+                                <div className="grid grid-cols-2 gap-4">
+                                  {user.cccdFrontImage ? (
+                                    <div 
+                                      onClick={() => setViewingImage(user.cccdFrontImage!)}
+                                      className="relative aspect-[3/2] bg-black rounded-2xl overflow-hidden border border-gray-800 group cursor-zoom-in"
+                                    >
+                                      <img src={user.cccdFrontImage} className="w-full h-full object-cover" alt="Front" />
+                                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[7px] font-black text-white uppercase">Mặt trước</div>
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                         <ExternalLink size={16} className="text-white" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-[3/2] bg-gray-900/50 rounded-2xl border border-gray-800 border-dashed flex items-center justify-center text-[7px] font-black text-gray-700 uppercase">Chưa có ảnh mặt trước</div>
+                                  )}
+                                  
+                                  {user.cccdBackImage ? (
+                                    <div 
+                                      onClick={() => setViewingImage(user.cccdBackImage!)}
+                                      className="relative aspect-[3/2] bg-black rounded-2xl overflow-hidden border border-gray-800 group cursor-zoom-in"
+                                    >
+                                      <img src={user.cccdBackImage} className="w-full h-full object-cover" alt="Back" />
+                                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[7px] font-black text-white uppercase">Mặt sau</div>
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                         <ExternalLink size={16} className="text-white" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="aspect-[3/2] bg-gray-900/50 rounded-2xl border border-gray-800 border-dashed flex items-center justify-center text-[7px] font-black text-gray-700 uppercase">Chưa có ảnh mặt sau</div>
+                                  )}
+                                </div>
+                            </div>
+
                             {user.refZaloNumber && (
-                              <div className="flex items-start gap-3 col-span-2 bg-orange-600/5 p-3 rounded-xl border border-orange-500/20">
+                              <div className="flex items-start gap-3 col-span-2 bg-orange-600/5 p-4 rounded-3xl border border-orange-500/10">
                                   <Users size={16} className="text-orange-500 mt-0.5" />
                                   <div>
                                       <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Tham chiếu: {user.refRelationship}</p>
@@ -176,24 +214,24 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
                               </div>
                             )}
 
-                            <div className="flex items-start gap-3 col-span-2 bg-gray-900/50 p-3 rounded-xl border border-gray-800">
+                            <div className="flex items-start gap-3 col-span-2 bg-gray-900/50 p-4 rounded-3xl border border-gray-800">
                                 <MapPin size={16} className="text-red-500 mt-0.5" />
                                 <div>
                                     <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Địa chỉ thường trú</p>
                                     <p className="text-xs font-medium text-gray-300">{user.address}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 col-span-2">
-                                <Calendar size={16} className="text-gray-600" />
-                                <div>
-                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-1">Tham gia hệ thống lúc</p>
-                                    <p className="text-[10px] font-bold text-gray-400">{new Date(user.joinedAt).toLocaleString('vi-VN')}</p>
+                            <div className="flex items-center gap-3 col-span-2 px-2">
+                                <Calendar size={14} className="text-gray-600" />
+                                <div className="flex justify-between flex-1">
+                                    <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest">Gia nhập hệ thống</p>
+                                    <p className="text-[9px] font-bold text-gray-400">{new Date(user.joinedAt).toLocaleString('vi-VN')}</p>
                                 </div>
                             </div>
                         </div>
                         <div className="mt-8 flex gap-3">
-                            <button className="flex-1 py-4 bg-[#FF8C1A]/10 text-[#FF8C1A] border border-[#FF8C1A]/20 rounded-2xl text-[10px] font-black uppercase hover:bg-[#FF8C1A]/20 transition-all">Cấu hình Hạn mức</button>
-                            <button className="flex-1 py-4 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl text-[10px] font-black uppercase hover:bg-red-600/20 transition-all">Khóa khách hàng</button>
+                            <button className="flex-1 py-4 bg-[#FF8C1A]/10 text-[#FF8C1A] border border-[#FF8C1A]/20 rounded-2xl text-[10px] font-black uppercase hover:bg-[#FF8C1A]/20 transition-all">Sửa Hạn mức</button>
+                            <button className="flex-1 py-4 bg-red-600/10 text-red-500 border border-red-600/20 rounded-2xl text-[10px] font-black uppercase hover:bg-red-600/20 transition-all">Khóa User</button>
                         </div>
                     </div>
                 )}
@@ -201,6 +239,20 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, tierRe
             ))
         )}
       </div>
+
+      {/* Image Viewer Overlay */}
+      {viewingImage && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setViewingImage(null)}
+        >
+          <div className="absolute top-6 right-6 z-[1001]">
+            <button onClick={() => setViewingImage(null)} className="p-3 bg-white/10 rounded-full text-white"><X size={24}/></button>
+          </div>
+          <img src={viewingImage} className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl animate-in zoom-in-95" alt="Preview" onClick={e => e.stopPropagation()} />
+          <p className="mt-8 text-gray-500 font-black text-xs uppercase tracking-widest">Chế độ xem đối soát hồ sơ</p>
+        </div>
+      )}
 
       {modal && (
         <ConfirmationModal 

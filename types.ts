@@ -34,9 +34,12 @@ export interface User {
   password?: string;
   isVerified: boolean;
   settlementProgress: number;
-  // Thông tin tham chiếu mới
+  // Thông tin tham chiếu
   refZaloNumber?: string;
   refRelationship?: string;
+  // Thông tin KYC CCCD
+  cccdFrontImage?: string;
+  cccdBackImage?: string;
 }
 
 export interface Loan {

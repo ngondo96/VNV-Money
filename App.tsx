@@ -51,7 +51,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isResetting.current && isLoaded) {
       const data = { users, loans, tierRequests, auditLogs, budget };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        if (e instanceof DOMException && (e.code === 22 || e.code === 1014 || e.name === 'QuotaExceededError')) {
+          console.error('LocalStorage limit reached!');
+          alert("Bộ nhớ trình duyệt đã đầy do chứa nhiều ảnh hồ sơ. Vui lòng vào mục 'Hệ thống' để Reset hoặc xóa bớt dữ liệu cũ.");
+        }
+      }
     }
   }, [users, loans, tierRequests, auditLogs, budget, isLoaded]);
 
@@ -65,7 +72,7 @@ const App: React.FC = () => {
 
   const addAuditLog = (performer: User | {fullName: string, id: string}, action: string) => {
     if (isResetting.current) return;
-    setAuditLogs(prev => [{ id: `LOG-${Date.now()}`, performerId: performer.id, performerName: performer.fullName, action, timestamp: new Date().toISOString(), ip: MOCK_IP, deviceId: MOCK_DEVICE }, ...prev]);
+    setAuditLogs(prev => [{ id: `LOG-${Date.now()}`, performerId: performer.id, performerName: performer.fullName, action, timestamp: new Date().toISOString(), ip: MOCK_IP, deviceId: MOCK_DEVICE }, ...prev.slice(0, 49)]); // Giới hạn 50 logs để tiết kiệm bộ nhớ
   };
 
   const applyOverduePenalty = useCallback(() => {

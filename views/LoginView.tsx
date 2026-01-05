@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, UserRole, UserTier } from '../types';
-import { ShieldCheck, User as UserIcon, Lock, MapPin, Hash, CheckCircle2, Users, Info, HelpCircle } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, Lock, MapPin, Hash, Users, HelpCircle, Camera, ImageIcon, AlertCircle, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 interface LoginViewProps {
   users: User[];
@@ -23,9 +23,42 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  // New Reference Fields
+  // Reference Fields
   const [refZalo, setRefZalo] = useState('');
   const [refRelationship, setRefRelationship] = useState('Anh/Chị/Em');
+
+  // KYC CCCD Fields
+  const [cccdFront, setCccdFront] = useState<string | null>(null);
+  const [cccdBack, setCccdBack] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<'front' | 'back' | null>(null);
+  
+  const frontInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+
+  const compressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // Nén xuống JPEG chất lượng 0.7 để tiết kiệm dung lượng localStorage
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+    });
+  };
 
   const handleCccdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
@@ -39,8 +72,34 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
 
   const handleRefZaloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-    // Chặn nhập dư quá 10 số
     if (val.length <= 10) setRefZalo(val);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // Tăng giới hạn input nhưng sẽ nén xuống
+        setError("Dung lượng file gốc quá lớn (>10MB).");
+        return;
+      }
+      
+      setProcessing(side);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string);
+        if (side === 'front') setCccdFront(compressed);
+        else setCccdBack(compressed);
+        setProcessing(null);
+        setError(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = (e: React.MouseEvent, side: 'front' | 'back') => {
+    e.stopPropagation();
+    if (side === 'front') setCccdFront(null);
+    else setCccdBack(null);
   };
 
   const handleAction = (e: React.FormEvent) => {
@@ -56,11 +115,9 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
       if (cleanZalo.length !== 10) return setError("Số Zalo phải đúng 10 số");
       if (password.length < 6) return setError("Mật khẩu phải từ 6 ký tự");
       if (password !== confirmPassword) return setError("Mật khẩu xác nhận không đúng");
-      
-      // Validation for reference
       if (refZalo.length !== 10) return setError("Số Zalo tham chiếu phải đúng 10 số");
       if (refZalo === cleanZalo) return setError("Zalo tham chiếu không được trùng với cá nhân");
-      
+      if (!cccdFront || !cccdBack) return setError("Bắt buộc phải cung cấp đủ ảnh CCCD.");
       if (!agreedToTerms) return setError("Bạn phải đồng ý với điều khoản");
       
       const isDuplicate = users.some(u => u.zaloNumber === cleanZalo);
@@ -80,7 +137,9 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
         password: password,
         settlementProgress: 0,
         refZaloNumber: refZalo,
-        refRelationship: refRelationship
+        refRelationship: refRelationship,
+        cccdFrontImage: cccdFront,
+        cccdBackImage: cccdBack
       };
       onRegister(newUser);
     } else {
@@ -116,9 +175,11 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
     }
   };
 
+  const isFormComplete = fullName && cccd.length === 12 && zalo.length === 10 && address && password && password === confirmPassword && agreedToTerms && cccdFront && cccdBack;
+
   return (
-    <div className="min-h-screen p-8 flex flex-col justify-center animate-in fade-in duration-700 bg-[#0F0F0F] pb-20">
-      <div className="mb-10 flex flex-col items-center text-center">
+    <div className="min-h-screen p-8 flex flex-col justify-center animate-in fade-in duration-700 bg-[#0F0F0F] pb-24">
+      <div className="mb-8 flex flex-col items-center text-center">
         <div className="w-20 h-20 bg-[#FF8C1A] rounded-[1.8rem] flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(255,140,26,0.3)] border-2 border-white/10">
           <ShieldCheck size={48} className="text-black" />
         </div>
@@ -186,18 +247,12 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
               </div>
             </div>
 
-            {/* REFERENCE SECTION - HORIZONTAL LAYOUT */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* REFERENCE SECTION */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="relative group">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                    <span className="text-gray-600 font-black text-[9px] uppercase">Ref</span>
-                   <button 
-                    type="button" 
-                    onMouseEnter={() => setShowRefTooltip(true)}
-                    onMouseLeave={() => setShowRefTooltip(false)}
-                    onClick={() => setShowRefTooltip(!showRefTooltip)}
-                    className="text-gray-600"
-                   >
+                   <button type="button" onMouseEnter={() => setShowRefTooltip(true)} onMouseLeave={() => setShowRefTooltip(false)} className="text-gray-600">
                      <HelpCircle size={10} />
                    </button>
                 </div>
@@ -210,7 +265,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                 />
                 {showRefTooltip && (
                   <div className="absolute -top-12 left-0 right-0 bg-red-600 text-white text-[8px] font-black p-2 rounded-xl z-50 shadow-xl animate-in fade-in slide-in-from-bottom-2 uppercase">
-                    Cảnh báo: Thông tin tham chiếu phải chính xác để duyệt hồ sơ!
+                    Thông tin tham chiếu phải chính xác!
                   </div>
                 )}
               </div>
@@ -230,6 +285,70 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
               </div>
             </div>
 
+            {/* KYC CCCD SECTION */}
+            <div className="bg-[#151515] p-5 rounded-[2.5rem] border border-gray-800/50 space-y-4 shadow-inner">
+               <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-black text-[#FF8C1A] uppercase tracking-[0.1em] flex items-center gap-2">
+                    <Camera size={14} /> Xác thực CCCD (Bắt buộc)
+                  </p>
+                  <span className="text-[8px] text-gray-600 font-black uppercase">Auto-Compress Enabled</span>
+               </div>
+               
+               <div className="grid grid-cols-2 gap-4">
+                  {/* Front Side Card */}
+                  <div 
+                    onClick={() => !processing && frontInputRef.current?.click()}
+                    className={`group relative aspect-[3/2] rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all duration-300 ${cccdFront ? 'border-green-500/50 bg-black' : 'border-gray-800 bg-black/40 hover:border-[#FF8C1A]/50'} ${processing === 'front' ? 'opacity-50' : ''}`}
+                  >
+                    {processing === 'front' ? (
+                      <Loader2 size={24} className="text-[#FF8C1A] animate-spin" />
+                    ) : cccdFront ? (
+                      <>
+                        <img src={cccdFront} className="w-full h-full object-cover opacity-90" alt="Front" />
+                        <button onClick={(e) => removeImage(e, 'front')} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-green-500/80 py-1 text-center">
+                           <span className="text-[8px] font-black text-black uppercase">Mặt trước OK</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Camera size={20} className="text-[#FF8C1A]" />
+                        <span className="text-[9px] font-black text-gray-500 uppercase text-center leading-tight">Mặt trước</span>
+                      </div>
+                    )}
+                    <input ref={frontInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'front')} />
+                  </div>
+
+                  {/* Back Side Card */}
+                  <div 
+                    onClick={() => !processing && backInputRef.current?.click()}
+                    className={`group relative aspect-[3/2] rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all duration-300 ${cccdBack ? 'border-green-500/50 bg-black' : 'border-gray-800 bg-black/40 hover:border-[#FF8C1A]/50'} ${processing === 'back' ? 'opacity-50' : ''}`}
+                  >
+                    {processing === 'back' ? (
+                      <Loader2 size={24} className="text-[#FF8C1A] animate-spin" />
+                    ) : cccdBack ? (
+                      <>
+                        <img src={cccdBack} className="w-full h-full object-cover opacity-90" alt="Back" />
+                        <button onClick={(e) => removeImage(e, 'back')} className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={12} />
+                        </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-green-500/80 py-1 text-center">
+                           <span className="text-[8px] font-black text-black uppercase">Mặt sau OK</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageIcon size={20} className="text-[#FF8C1A]" />
+                        <span className="text-[9px] font-black text-gray-500 uppercase text-center leading-tight">Mặt sau</span>
+                      </div>
+                    )}
+                    <input ref={backInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'back')} />
+                  </div>
+               </div>
+            </div>
+
             <div className="flex items-start gap-3 px-2 pt-1">
               <button 
                 type="button"
@@ -239,7 +358,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
                 {agreedToTerms && <div className="w-3 h-3 bg-black rounded-sm" />}
               </button>
               <p className="text-[10px] text-gray-600 font-bold leading-tight uppercase tracking-tighter">
-                Tôi xác nhận mọi thông tin cá nhân và người tham chiếu là chính xác, đồng ý với <span className="text-[#FF8C1A]">Điều khoản pháp lý</span>.
+                Tôi cam kết thông tin cá nhân và ảnh CCCD là chính xác.
               </p>
             </div>
           </div>
@@ -264,13 +383,18 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLogin, onRegister }) => 
           </div>
         )}
 
-        {error && <div className="p-3 bg-red-600/10 border border-red-600/20 text-red-500 text-[10px] font-black uppercase text-center rounded-xl animate-in shake duration-300">{error}</div>}
+        {error && (
+          <div className="p-3 bg-red-600/10 border border-red-600/20 text-red-500 text-[10px] font-black uppercase text-center rounded-xl animate-in shake duration-300 flex items-center justify-center gap-2">
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
 
         <button 
           type="submit"
-          className="w-full py-4 bg-[#FF8C1A] text-black font-black text-lg rounded-2xl hover:bg-[#E67E17] transition-all transform active:scale-[0.97] shadow-[0_10px_20px_rgba(255,140,26,0.3)] uppercase tracking-widest mt-2"
+          disabled={(isRegistering && (!isFormComplete || processing !== null))}
+          className={`w-full py-4 font-black text-lg rounded-2xl transition-all transform active:scale-[0.97] shadow-[0_10px_20px_rgba(255,140,26,0.3)] uppercase tracking-widest mt-2 ${(isRegistering && (!isFormComplete || processing !== null)) ? 'bg-gray-800 text-gray-600 cursor-not-allowed opacity-50 grayscale' : 'bg-[#FF8C1A] text-black hover:bg-[#E67E17]'}`}
         >
-          {isRegistering ? "ĐĂNG KÝ NGAY" : "ĐĂNG NHẬP"}
+          {processing ? "ĐANG XỬ LÝ ẢNH..." : isRegistering ? (isFormComplete ? "ĐĂNG KÝ NGAY" : "CẦN ĐỦ THÔNG TIN") : "ĐĂNG NHẬP"}
         </button>
 
         <div className="text-center mt-6">
