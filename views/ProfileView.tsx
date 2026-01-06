@@ -143,7 +143,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdatePassw
                        <Scale size={16} className="text-[#FF8C1A]" />
                        <span>1. Điều khoản sử dụng</span>
                     </div>
-                    <p className="pl-6">Người dùng cam kết cung cấp thông tin định danh chính chủ. Việc sử dụng thông tin giả mạo sẽ dẫn đến khóa tài khoản vĩnh viễn và truy cứu trách nhiệm trước cơ quan có thẩm quyền.</p>
+                    <p className="pl-6">Người dùng cam kết cung cấp thông tin định danh chính chủ. Việc sử dụng thông tin giả mạo sẽ dẫn đến khóa tài khoản vĩnh viễn.</p>
                  </section>
 
                  <section className="space-y-3">
@@ -151,15 +151,18 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdatePassw
                        <Clock size={16} className="text-[#FF8C1A]" />
                        <span>2. Thời hạn trả</span>
                     </div>
-                    <p className="pl-6">Tất cả các khoản vay gốc và lãi phải được tất toán chậm nhất vào <span className="font-bold text-black">ngày 27 hàng tháng</span>. Hệ thống sẽ tự động chốt dư nợ vào thời điểm này.</p>
+                    <p className="pl-6">Các khoản vay phải được tất toán chậm nhất vào <span className="font-bold text-black">ngày 27 hàng tháng</span>.</p>
                  </section>
 
                  <section className="space-y-3">
                     <div className="flex items-center gap-2 font-black text-red-600 uppercase">
                        <AlertCircle size={16} />
-                       <span>3. Phí phạt</span>
+                       <span>3. Phí phạt chậm trả</span>
                     </div>
-                    <p className="pl-6 italic font-medium">Phí phạt trễ hạn được áp dụng là <span className="font-bold text-red-600">0.1%/ngày</span> trên tổng dư nợ. Phí này sẽ được cộng dồn hàng ngày cho đến khi khoản nợ được tất toán hoàn toàn.</p>
+                    <p className="pl-6 italic font-medium">
+                      Hệ thống tự động áp dụng phí phạt <span className="font-bold text-red-600">0.1%/ngày</span> tính trên dư nợ gốc thực tế. <br/>
+                      <span className="font-black text-black">GIỚI HẠN:</span> Tổng phí phạt tối đa không vượt quá <span className="font-bold text-red-600">30% số tiền gốc</span> vay ban đầu. Phí sẽ ngừng phát sinh khi đạt ngưỡng này.
+                    </p>
                  </section>
 
                  <section className="space-y-3">
@@ -167,41 +170,32 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdatePassw
                        <ShieldAlert size={16} className="text-[#FF8C1A]" />
                        <span>4. Nghĩa vụ hoàn trả</span>
                     </div>
-                    <p className="pl-6">Bên vay có nghĩa vụ hoàn trả đúng và đủ số nợ gốc kèm lãi, phí phạt (nếu có) theo đúng cam kết trong Hợp đồng tín dụng điện tử đã ký.</p>
-                 </section>
-
-                 <section className="space-y-3">
-                    <div className="flex items-center gap-2 font-black text-black uppercase">
-                       <ShieldAlert size={16} className="text-red-600" />
-                       <span>5. Thu hồi nợ</span>
-                    </div>
-                    <p className="pl-6">Trong trường hợp vi phạm nghĩa vụ thanh toán, hệ thống VNV có quyền áp dụng các biện pháp nhắc nợ thông qua các kênh liên lạc định danh và thu hồi tài sản theo quy định.</p>
+                    <p className="pl-6">Bên vay có nghĩa vụ hoàn trả đúng và đủ số nợ gốc kèm lãi, phí phạt (nếu có) theo đúng cam kết.</p>
                  </section>
 
                  <section className="space-y-3">
                     <div className="flex items-center gap-2 font-black text-black uppercase">
                        <TrendingUp size={16} className="text-green-600" />
-                       <span>6. Nâng cấp hạng</span>
+                       <span>5. Nâng cấp hạng</span>
                     </div>
                     <div className="pl-6 space-y-2">
-                       <p><span className="font-bold">Tự động:</span> Hoàn thành <span className="text-green-600 font-bold">10 lần thanh toán đúng hạn</span> (đạt 10/10 điểm tiến trình) để tự động lên hạng tiếp theo.</p>
-                       <p><span className="font-bold">Thủ công:</span> Gửi yêu cầu thẩm định nhanh với mức phí 5% hạn mức mới thông qua mục "Hạng & Hạn mức".</p>
+                       <p><span className="font-bold">Tự động:</span> Hoàn thành <span className="text-green-600 font-bold">10 lần thanh toán đúng hạn</span> để tự động lên hạng tiếp theo.</p>
                     </div>
                  </section>
 
                  <section className="space-y-3">
                     <div className="flex items-center gap-2 font-black text-black uppercase">
                        <TrendingDown size={16} className="text-red-500" />
-                       <span>7. Xuống Hạng</span>
+                       <span>6. Xuống Hạng</span>
                     </div>
                     <p className="pl-6">
-                       Hệ thống áp dụng quy tắc <span className="font-bold text-red-500">Kỷ luật Tín dụng</span>: Cứ mỗi <span className="font-bold text-red-600">01 ngày trễ hạn</span> thanh toán, hệ thống sẽ tự động <span className="font-bold text-red-600">trừ 01 điểm tiến trình</span>. Khi điểm tiến trình <span className="font-bold">hết (về 0)</span>, tài khoản sẽ tự động bị <span className="font-bold text-red-600">xuống hạng thấp hơn</span> và giảm hạn mức tương ứng. Quy tắc này áp dụng cho đến khi Admin xác nhận khoản nợ đã được tất toán.
+                       Mỗi <span className="font-bold text-red-600">01 ngày trễ hạn</span>, hệ thống sẽ <span className="font-bold text-red-600">trừ 01 điểm tiến trình</span>. Khi điểm về 0, tài khoản sẽ tự động bị <span className="font-bold text-red-600">xuống hạng thấp hơn</span>.
                     </p>
                  </section>
               </div>
               
               <div className="pt-6 border-t border-gray-100 text-center">
-                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Cập nhật: 27/05/2024</p>
+                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Cập nhật chính sách: 2024</p>
               </div>
            </div>
            
@@ -209,7 +203,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, onUpdatePassw
         </div>
       )}
 
-      {/* MODAL: ĐỔI MẬT KHẨU */}
       {showChangePass && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-6 overflow-y-auto backdrop-blur-md animate-in slide-in-from-top-10">
            <div className="flex justify-between items-center mb-10">

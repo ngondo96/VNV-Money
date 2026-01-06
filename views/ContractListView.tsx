@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Loan, User } from '../types';
 import { FORMAT_CURRENCY, MOCK_IP } from '../constants';
-import { FileText, Download, ShieldCheck, ChevronRight, X, Shield, Award } from 'lucide-react';
+import { FileText, Download, ShieldCheck, ChevronRight, X, Shield, Award, Clock, AlertCircle } from 'lucide-react';
 
 interface ContractListViewProps {
   loans: Loan[];
@@ -16,29 +16,33 @@ const ContractListView: React.FC<ContractListViewProps> = ({ loans, user }) => {
     const fileName = `HopDong_VNV_${loan.id}.txt`;
     const docContent = `
 =====================================================
-                    HỢP ĐỒNG VAY VỐN
+            HỢP ĐỒNG TÍN DỤNG ĐIỆN TỬ (SAO Y)
 =====================================================
-Mã HĐ: ${loan.id} | Ngày ký: ${new Date(loan.requestedAt).toLocaleString('vi-VN')}
-Xác thực IP: ${MOCK_IP} | Chứng thực: VNV PRO v37
+Mã HĐ: ${loan.id}
+Ngày ký: ${new Date(loan.requestedAt).toLocaleString('vi-VN')}
+Xác thực IP: ${MOCK_IP}
+Trạng thái: Đã chứng thực v37 PRO
 
 ĐIỀU 1: CÁC BÊN THAM GIA
-- Bên vay: ${loan.userName}, CCCD: ${loan.userCccd}
-- Bên cho vay: VNV MONEY
+- Bên vay (B): ${loan.userName}
+- CCCD: ${loan.userCccd}
+- Bên cho vay (A): VNV MONEY
 
 ĐIỀU 2: SỐ TIỀN & THỜI HẠN
-- Số tiền: ${FORMAT_CURRENCY(loan.amount)}
-- Hạn trả cố định: Ngày 27 hàng tháng.
+- Số tiền vay: ${FORMAT_CURRENCY(loan.amount)}
+- Hạn thanh toán: Ngày 27 hàng tháng.
 
-ĐIỀU 3: PHÍ PHẠT TRỄ HẠN
-- Mức phạt: 0.1%/ngày tính trên số dư nợ trễ hạn.
+ĐIỀU 3: PHÍ PHẠT CHẬM TRẢ
+- Mức phí: 0.1%/ngày tính trên dư nợ gốc.
+- Giới hạn: Tổng phí phạt tối đa không vượt quá 30% giá trị khoản vay ban đầu.
 
 ĐIỀU 4: NGHĨA VỤ HOÀN TRẢ
-- Bên vay cam kết trả đúng hạn. Trễ hạn sẽ bị hạ tín nhiệm hệ thống.
+- Bên B cam kết hoàn trả đầy đủ đúng hạn. Trễ hạn sẽ ảnh hưởng trực tiếp đến điểm tín dụng và quyền lợi nâng hạng trên hệ thống VNV Money.
 
-ĐIỀU 5: NGHĨA VỤ TÀI SẢN
-- VNV có quyền áp dụng các biện pháp thu hồi nợ nếu vi phạm Điều 4.
+ĐIỀU 5: BIỆN PHÁP XỬ LÝ
+- VNV có quyền áp dụng các biện pháp thu hồi nợ và phong tỏa tài khoản định danh nếu xảy ra vi phạm nghĩa vụ hoàn trả.
 
-XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
+XÁC THỰC: Hợp đồng được ký bằng chữ ký số định danh điện tử.
 =====================================================
 `;
     const blob = new Blob([docContent], { type: 'text/plain;charset=utf-8' });
@@ -98,8 +102,8 @@ XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
               <div className="flex items-center gap-3">
                  <div className="p-2 bg-[#FF8C1A]/10 rounded-lg"><ShieldCheck className="text-[#FF8C1A]" size={20} /></div>
                  <div>
-                    <h3 className="text-xs font-black uppercase text-white tracking-widest">Bản sao điện tử</h3>
-                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest">{viewingContract.id}</p>
+                    <h3 className="text-xs font-black uppercase text-white tracking-widest">Sao y bản chính</h3>
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest">Hệ thống chứng thực PRO v37.2</p>
                  </div>
               </div>
               <button onClick={() => setViewingContract(null)} className="p-2 bg-white/5 rounded-full text-white"><X size={24}/></button>
@@ -120,7 +124,7 @@ XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
                        <div className="w-14 h-14 bg-black text-[#FF8C1A] rounded-[1.2rem] flex items-center justify-center font-black text-xl shadow-lg">VNV</div>
                     </div>
                     <h2 className="text-[15px] font-black uppercase tracking-tighter">HỢP ĐỒNG TÍN DỤNG ĐIỆN TỬ</h2>
-                    <p className="text-[7px] font-black text-gray-400 uppercase mt-2 italic">Dữ liệu được bảo vệ v37 PRO</p>
+                    <p className="text-[7px] text-gray-400 font-black uppercase mt-2 italic">Dữ liệu được bảo vệ v37.2 PRO</p>
                  </div>
 
                  <div className="space-y-6 text-[10px] leading-relaxed text-gray-800">
@@ -135,22 +139,25 @@ XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
 
                     <section className="space-y-2">
                        <p className="font-black uppercase border-l-4 border-black pl-2">ĐIỀU 2: SỐ TIỀN & THỜI HẠN</p>
-                       <p className="pl-4">Số tiền: <span className="font-bold">{FORMAT_CURRENCY(viewingContract.amount)}</span>. Hạn thanh toán cố định vào ngày 27 hàng tháng.</p>
+                       <p className="pl-4">Số tiền vay: <span className="font-bold">{FORMAT_CURRENCY(viewingContract.amount)}</span>. Hạn thanh toán cố định vào ngày 27 hàng tháng.</p>
                     </section>
 
                     <section className="space-y-2">
-                       <p className="font-black uppercase border-l-4 border-red-600 pl-2 text-red-600">ĐIỀU 3: PHÍ PHẠT TRỄ HẠN</p>
-                       <p className="pl-4 italic">Bên B chịu phí phạt 0.1%/ngày khi vi phạm thời gian thanh toán quy định.</p>
+                       <p className="font-black uppercase border-l-4 border-red-600 pl-2 text-red-600">ĐIỀU 3: PHÍ PHẠT CHẬM TRẢ</p>
+                       <p className="pl-4 italic leading-relaxed">
+                          Phí phạt là <span className="font-bold text-red-600">0.1%/ngày</span> tính trên dư nợ gốc. <br/>
+                          <span className="font-black text-black">Lưu ý:</span> Tổng phí phạt không vượt quá <span className="font-bold text-red-600">30%</span> giá trị khoản vay ban đầu. Phí sẽ ngừng phát sinh khi đạt ngưỡng này.
+                       </p>
                     </section>
 
                     <section className="space-y-2">
                        <p className="font-black uppercase border-l-4 border-black pl-2">ĐIỀU 4: NGHĨA VỤ HOÀN TRẢ</p>
-                       <p className="pl-4">Bên vay cam kết hoàn trả đầy đủ đúng hạn. Mọi vi phạm sẽ được xử lý theo quy định của VNV Money.</p>
+                       <p className="pl-4">Bên vay cam kết hoàn trả đầy đủ đúng hạn. Trễ hạn ảnh hưởng trực tiếp tới điểm tín dụng và quyền lợi nâng hạng tự động trên hệ thống.</p>
                     </section>
 
                     <section className="space-y-2">
-                       <p className="font-black uppercase border-l-4 border-black pl-2">ĐIỀU 5: NGHĨA VỤ TÀI SẢN</p>
-                       <p className="pl-4">VNV được quyền truy thu nợ từ các tài khoản định danh liên kết nếu xảy ra vi phạm Điều 4.</p>
+                       <p className="font-black uppercase border-l-4 border-black pl-2">ĐIỀU 5: BIỆN PHÁP XỬ LÝ</p>
+                       <p className="pl-4">VNV MONEY có quyền áp dụng các biện pháp truy thu nợ, phong tỏa tài khoản tín dụng và các tài khoản định danh liên kết nếu xảy ra vi phạm nghĩa vụ hoàn trả.</p>
                     </section>
                  </div>
 
@@ -170,7 +177,7 @@ XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
 
                     <div className="text-center">
                        <p className="text-[7px] font-black text-gray-400 uppercase mb-4">Bên vay (B)</p>
-                       <div className="w-full h-24 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden">
+                       <div className="w-full h-24 bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden shadow-inner">
                           {viewingContract.signatureData && <img src={viewingContract.signatureData} alt="Sig" className="max-h-full mix-blend-multiply" />}
                        </div>
                        <p className="text-[9px] font-black uppercase mt-3 text-blue-900">{viewingContract.userName}</p>
@@ -179,7 +186,20 @@ XÁC THỰC: Đã ký điện tử bằng v37 PRO Digital Signature.
               </div>
            </div>
            
-           <button onClick={() => setViewingContract(null)} className="mt-6 w-full py-5 bg-black text-white rounded-[2rem] font-black text-xs uppercase shadow-xl active:scale-95 transition-all">HOÀN TẤT</button>
+           <div className="flex gap-3 mt-4">
+              <button 
+                onClick={() => handleDownloadPDF(viewingContract)} 
+                className="flex-1 py-5 bg-gray-800 text-white rounded-[2rem] font-black text-xs uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Download size={18} /> Tải bản sao
+              </button>
+              <button 
+                onClick={() => setViewingContract(null)} 
+                className="flex-[2] py-5 bg-black text-white rounded-[2rem] font-black text-xs uppercase shadow-xl active:scale-95 transition-all"
+              >
+                ĐÓNG HỒ SƠ
+              </button>
+           </div>
         </div>
       )}
     </div>

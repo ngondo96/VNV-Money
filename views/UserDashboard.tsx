@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { User, Loan, SystemBudget, LoanStatus, UserTier } from '../types';
 import { FORMAT_CURRENCY } from '../constants';
-import { CreditCard, Clock, AlertCircle, FileText, Zap, RefreshCw, ShieldCheck, TrendingUp, History, Landmark, Percent, Activity, Award, Star, TrendingDown } from 'lucide-react';
+import { CreditCard, Clock, AlertCircle, FileText, Zap, RefreshCw, ShieldCheck, TrendingUp, History, Landmark, Percent, Activity, Award, Star, TrendingDown, AlertTriangle, ArrowRightCircle } from 'lucide-react';
 
 interface UserDashboardProps {
   user: User;
@@ -36,20 +36,26 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
   const disbursedLoans = loans.filter(l => l.status === LoanStatus.DISBURSED);
   const settledLoans = loans.filter(l => l.status === LoanStatus.SETTLED);
   
-  const currentDebt = disbursedLoans.reduce((acc, curr) => acc + curr.amount + (curr.accruedFine || 0), 0);
+  const currentDebtPrincipal = disbursedLoans.reduce((acc, curr) => acc + curr.amount, 0);
+  const currentDebtFines = disbursedLoans.reduce((acc, curr) => acc + (curr.accruedFine || 0), 0);
+  const totalCurrentDebt = currentDebtPrincipal + currentDebtFines;
+
   const totalBorrowed = loans.filter(l => l.status !== LoanStatus.REJECTED && l.status !== LoanStatus.REQUESTED)
                             .reduce((acc, curr) => acc + curr.amount, 0);
   const totalPaid = settledLoans.reduce((acc, curr) => acc + curr.amount + (curr.accruedFine || 0), 0);
 
   const historyLoans = [...loans].sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
 
-  // Kiểm tra trễ hạn cho UI
-  const isOverdue = new Date().getDate() > 27 && disbursedLoans.length > 0;
+  // Kiểm tra trễ hạn (Sau ngày 27)
+  const currentDay = new Date().getDate();
+  const dueDate = 27;
+  const isOverdue = currentDay > dueDate && disbursedLoans.length > 0;
+  const daysLate = isOverdue ? (currentDay - dueDate) : 0;
 
   const getStatusStyle = (status: LoanStatus) => {
     switch (status) {
       case LoanStatus.SETTLED: return 'bg-green-500';
-      case LoanStatus.DISBURSED: return 'bg-blue-500 animate-pulse';
+      case LoanStatus.DISBURSED: return isOverdue ? 'bg-red-500' : 'bg-blue-500 animate-pulse';
       case LoanStatus.APPROVED: return 'bg-cyan-500';
       case LoanStatus.REJECTED: return 'bg-red-500';
       default: return 'bg-orange-500';
@@ -66,6 +72,33 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-6 duration-700 pb-10">
+      {/* OVERDUE CRITICAL ALERT BANNER */}
+      {isOverdue && (
+        <div className="mx-2 bg-red-600 rounded-[2rem] p-5 shadow-[0_10px_30px_rgba(220,38,38,0.4)] animate-in slide-in-from-top-4 duration-500 relative overflow-hidden">
+           <div className="absolute right-[-10px] top-[-10px] opacity-10 rotate-12">
+              <AlertTriangle size={100} />
+           </div>
+           <div className="flex items-start gap-4 relative z-10">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-inner">
+                 <AlertTriangle size={24} className="animate-bounce" />
+              </div>
+              <div className="flex-1">
+                 <h3 className="text-white font-black uppercase text-sm tracking-tighter leading-tight">Cảnh báo: Khoản nợ quá hạn!</h3>
+                 <p className="text-white/80 text-[10px] font-bold uppercase tracking-tight mt-1">
+                    Bạn đã trễ hạn <span className="text-white font-black underline">{daysLate} ngày</span>. Phí phạt đang tích lũy hàng ngày (0.1%/ngày).
+                 </p>
+                 <div className="mt-4 flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/10">
+                    <div>
+                       <p className="text-[8px] text-white/60 font-black uppercase">Tổng nợ cần trả</p>
+                       <p className="text-sm font-black text-white">{FORMAT_CURRENCY(totalCurrentDebt)}</p>
+                    </div>
+                    <ArrowRightCircle size={20} className="text-white opacity-50" />
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
       {/* Account Info Card */}
       <div className="bg-gradient-to-br from-[#FF8C1A] to-[#E67E17] p-8 rounded-[3rem] text-black relative overflow-hidden shadow-[0_20px_40px_rgba(255,140,26,0.2)]">
         <div className="relative z-10">
@@ -181,7 +214,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
             </div>
           </div>
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Dư nợ hiện tại</p>
-          <p className={`text-lg font-black ${isOverdue ? 'text-red-500' : ''}`}>{FORMAT_CURRENCY(currentDebt)}</p>
+          <p className={`text-lg font-black ${isOverdue ? 'text-red-500' : ''}`}>{FORMAT_CURRENCY(totalCurrentDebt)}</p>
         </div>
 
         <div className="bg-[#1A1A1A] p-5 rounded-3xl border border-gray-800 hover:border-orange-500/30 transition-all group shadow-lg">
@@ -213,16 +246,16 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, loans, budget }) =>
         ) : (
           <div className="space-y-3 px-2">
             {historyLoans.map(loan => (
-              <div key={loan.id} className="bg-[#1A1A1A] p-5 rounded-[2rem] border border-gray-800 flex items-center justify-between group hover:border-gray-600 transition-all shadow-md">
+              <div key={loan.id} className={`bg-[#1A1A1A] p-5 rounded-[2rem] border ${loan.status === LoanStatus.DISBURSED && isOverdue ? 'border-red-500/50' : 'border-gray-800'} flex items-center justify-between group hover:border-gray-600 transition-all shadow-md`}>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-800 rounded-2xl flex items-center justify-center">
-                     <FileText size={22} className="text-gray-500 group-hover:text-[#FF8C1A]" />
+                  <div className={`w-12 h-12 ${loan.status === LoanStatus.DISBURSED && isOverdue ? 'bg-red-500/10' : 'bg-gray-800'} rounded-2xl flex items-center justify-center`}>
+                     <FileText size={22} className={`${loan.status === LoanStatus.DISBURSED && isOverdue ? 'text-red-500' : 'text-gray-500 group-hover:text-[#FF8C1A]'}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-black tracking-tight">{FORMAT_CURRENCY(loan.amount)}</p>
+                    <p className="text-sm font-black tracking-tight">{FORMAT_CURRENCY(loan.amount + (loan.accruedFine || 0))}</p>
                     <p className="text-[9px] text-gray-600 uppercase font-black mt-1 flex items-center gap-1">
                       <span className={`w-1.5 h-1.5 rounded-full ${getStatusStyle(loan.status)}`}></span>
-                      {loan.status}
+                      {loan.status === LoanStatus.DISBURSED && isOverdue ? 'Quá hạn' : loan.status}
                     </p>
                   </div>
                 </div>

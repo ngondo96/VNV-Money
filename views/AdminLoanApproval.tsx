@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Loan, LoanStatus, SystemBudget, UserRole, User } from '../types';
 import { FORMAT_CURRENCY, MOCK_IP } from '../constants';
-import { Check, X, FileText, AlertTriangle, Search, ShieldCheck, PenTool, ChevronDown, ChevronUp, Wallet, Clock, User as UserIcon, Shield, ExternalLink, History, FileCheck, Coins, CreditCard } from 'lucide-react';
+import { Check, X, FileText, AlertTriangle, Search, ShieldCheck, PenTool, ChevronDown, ChevronUp, Wallet, Clock, User as UserIcon, Shield, ExternalLink, History, FileCheck, Coins, CreditCard, AlertCircle } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 interface AdminLoanApprovalProps {
@@ -16,6 +16,9 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
   const [viewingContract, setViewingContract] = useState<Loan | null>(null);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [modal, setModal] = useState<{ loanId: string; status: LoanStatus } | null>(null);
+
+  const currentDay = new Date().getDate();
+  const dueDate = 27;
 
   const groupedLoans = loans.reduce((acc, loan) => {
     if (!acc[loan.userId]) {
@@ -33,8 +36,14 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
   const handleAction = (loanId: string, status: LoanStatus) => setModal({ loanId, status });
   const confirmAction = () => { if (modal) { onUpdateStatus(modal.loanId, modal.status); setModal(null); } };
 
-  const getStatusBadge = (status: LoanStatus) => {
-    switch (status) {
+  const getStatusBadge = (loan: Loan) => {
+    const isOverdue = loan.status === LoanStatus.DISBURSED && currentDay > dueDate;
+    
+    if (isOverdue) {
+      return <span className="px-2 py-0.5 rounded-md bg-red-600 text-white text-[8px] font-black uppercase flex items-center gap-1"><AlertCircle size={8}/> Quá hạn</span>;
+    }
+
+    switch (loan.status) {
       case LoanStatus.REQUESTED: return <span className="px-2 py-0.5 rounded-md bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[8px] font-black uppercase">Chờ duyệt</span>;
       case LoanStatus.DISBURSED: return <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[8px] font-black uppercase">Đang nợ</span>;
       case LoanStatus.SETTLED: return <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 border border-green-500/20 text-[8px] font-black uppercase">Đã trả</span>;
@@ -72,20 +81,22 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
             const sortedLoans = [...userData.loans].sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
             
             const disbursedLoans = sortedLoans.filter(l => l.status === LoanStatus.DISBURSED);
+            const overdueCount = disbursedLoans.filter(l => currentDay > dueDate).length;
+            
             const totalDisbursedPrincipal = disbursedLoans.reduce((acc, l) => acc + l.amount, 0);
             const totalDisbursedFines = disbursedLoans.reduce((acc, l) => acc + (l.accruedFine || 0), 0);
             const totalActualCollection = (totalDisbursedPrincipal * 1.15) + totalDisbursedFines;
             const pendingCount = sortedLoans.filter(l => l.status === LoanStatus.REQUESTED).length;
 
             return (
-              <div key={uid} className="bg-[#1A1A1A] border border-gray-800 rounded-[2.5rem] overflow-hidden shadow-lg hover:border-gray-700 transition-all">
+              <div key={uid} className={`bg-[#1A1A1A] border ${overdueCount > 0 ? 'border-red-600/50' : 'border-gray-800'} rounded-[2.5rem] overflow-hidden shadow-lg hover:border-gray-700 transition-all`}>
                 <div 
                   onClick={() => setExpandedUser(expandedUser === uid ? null : uid)}
                   className="p-6 flex items-center justify-between cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-900 rounded-2xl flex items-center justify-center border border-gray-800 relative shadow-inner">
-                       <UserIcon size={24} className="text-[#FF8C1A]" />
+                    <div className={`w-12 h-12 ${overdueCount > 0 ? 'bg-red-600/10' : 'bg-gray-900'} rounded-2xl flex items-center justify-center border border-gray-800 relative shadow-inner`}>
+                       <UserIcon size={24} className={overdueCount > 0 ? 'text-red-500' : 'text-[#FF8C1A]'} />
                        {pendingCount > 0 && (
                          <div className="absolute -top-2 -right-2 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] animate-bounce shadow-lg">
                             <span className="text-[10px] font-black">{pendingCount}</span>
@@ -95,6 +106,7 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
                     <div>
                       <h4 className="font-black text-sm uppercase text-white tracking-tight flex items-center gap-2">
                         {userData.userName}
+                        {overdueCount > 0 && <span className="bg-red-600 text-white text-[7px] font-black px-1.5 py-0.5 rounded-sm">XẤU</span>}
                         {pendingCount > 0 && <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse"></span>}
                       </h4>
                       <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Mã khách: {uid.slice(-8)}</p>
@@ -103,7 +115,7 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
                   <div className="flex items-center gap-3">
                      <div className="text-right flex flex-col items-end">
                         <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest bg-black/40 px-2 py-1 rounded-lg border border-gray-800">Tổng HĐ: {sortedLoans.length}</span>
-                        {disbursedLoans.length > 0 && <span className="text-[7px] font-black text-blue-500 uppercase mt-1">Đang nợ: {disbursedLoans.length}</span>}
+                        {overdueCount > 0 && <span className="text-[7px] font-black text-red-500 uppercase mt-1 animate-pulse">Quá hạn: {overdueCount}</span>}
                      </div>
                      <div className="p-2 bg-gray-900 rounded-xl text-gray-600">{expandedUser === uid ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}</div>
                   </div>
@@ -115,13 +127,13 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
                       <p className="text-center py-4 text-[10px] text-gray-600 font-bold uppercase italic">Không có lịch sử vay</p>
                     ) : (
                       sortedLoans.map(loan => (
-                        <div key={loan.id} className={`bg-[#222] border rounded-2xl p-4 flex items-center justify-between shadow-lg transition-all ${loan.status === LoanStatus.REQUESTED ? 'border-orange-500/50 scale-[1.01]' : 'border-gray-800'}`}>
+                        <div key={loan.id} className={`bg-[#222] border rounded-2xl p-4 flex items-center justify-between shadow-lg transition-all ${loan.status === LoanStatus.REQUESTED ? 'border-orange-500/50 scale-[1.01]' : (loan.status === LoanStatus.DISBURSED && currentDay > dueDate) ? 'border-red-600/50' : 'border-gray-800'}`}>
                           <div>
                              <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[9px] text-gray-500 font-bold tracking-widest">{loan.id}</span>
-                                {getStatusBadge(loan.status)}
+                                {getStatusBadge(loan)}
                              </div>
-                             <p className="text-sm font-black text-white">{FORMAT_CURRENCY(loan.amount)}</p>
+                             <p className="text-sm font-black text-white">{FORMAT_CURRENCY(loan.amount + (loan.accruedFine || 0))}</p>
                           </div>
                           <div className="flex gap-2">
                              <button onClick={() => setViewingContract(loan)} className="p-2.5 bg-gray-800 text-gray-400 rounded-xl hover:text-white transition-colors" title="Đối soát"><ExternalLink size={16} /></button>
@@ -135,15 +147,15 @@ const AdminLoanApproval: React.FC<AdminLoanApprovalProps> = ({ loans, onUpdateSt
                   </div>
                 )}
 
-                <div className={`bg-gradient-to-r ${totalActualCollection > 0 ? 'from-[#FF8C1A]/20 to-black' : 'from-gray-900 to-black'} border-t border-gray-800 p-4 px-6 flex items-center justify-between`}>
+                <div className={`bg-gradient-to-r ${totalActualCollection > 0 ? (overdueCount > 0 ? 'from-red-600/20' : 'from-[#FF8C1A]/20') + ' to-black' : 'from-gray-900 to-black'} border-t border-gray-800 p-4 px-6 flex items-center justify-between`}>
                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${totalActualCollection > 0 ? 'bg-[#FF8C1A]/10 text-[#FF8C1A]' : 'bg-gray-800 text-gray-600'}`}>
+                      <div className={`p-2 rounded-xl ${totalActualCollection > 0 ? (overdueCount > 0 ? 'bg-red-600/10 text-red-500' : 'bg-[#FF8C1A]/10 text-[#FF8C1A]') : 'bg-gray-800 text-gray-600'}`}>
                          <Coins size={16} />
                       </div>
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tổng thực thu:</span>
                    </div>
                    <div className="text-right">
-                      <p className={`text-sm font-black tracking-tight ${totalActualCollection > 0 ? 'text-[#FF8C1A]' : 'text-gray-700'}`}>
+                      <p className={`text-sm font-black tracking-tight ${totalActualCollection > 0 ? (overdueCount > 0 ? 'text-red-500' : 'text-[#FF8C1A]') : 'text-gray-700'}`}>
                         {FORMAT_CURRENCY(totalActualCollection)}
                       </p>
                       <p className="text-[8px] text-gray-600 font-bold uppercase tracking-tighter">

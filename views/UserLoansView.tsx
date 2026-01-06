@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, Loan, LoanStatus, SystemBudget } from '../types';
 import { FORMAT_CURRENCY } from '../constants';
-import { Plus, X, Wallet, FileText, CheckCircle, ShieldCheck, Award, Shield, AlertCircle } from 'lucide-react';
+import { Plus, X, Wallet, FileText, CheckCircle, ShieldCheck, Award, Shield, AlertCircle, Clock } from 'lucide-react';
 import SignaturePad from '../components/SignaturePad';
 
 interface UserLoansViewProps {
@@ -27,7 +27,6 @@ const UserLoansView: React.FC<UserLoansViewProps> = ({ user, loans, budget, onCr
   const totalCurrentDebt = activeDebtItems.reduce((acc, curr) => acc + curr.amount, 0);
   const userAvailableLimit = Math.max(0, user.limit - totalCurrentDebt);
   
-  // Hạn mức thực tế không được vượt quá ngân sách còn lại của hệ thống
   const effectiveLimit = Math.min(userAvailableLimit, budget.remaining);
   const isLimitedBySystem = budget.remaining < userAvailableLimit;
 
@@ -36,17 +35,21 @@ const UserLoansView: React.FC<UserLoansViewProps> = ({ user, loans, budget, onCr
   const handleRegister = () => {
     if (!amount || !signature) return;
     const mockAiScore = 750 + Math.floor(Math.random() * 150);
-    
     onCreateLoan({ amount, signature, aiScore: mockAiScore });
-    
-    // Logic Zalo Group: Chỉ mở cho khoản vay đầu tiên (N=0)
     if (loans.length === 0) {
       window.open('https://zalo.me/g/escncv086', '_blank');
     }
-    
     setIsCreating(false);
     setAmount(0);
     setSignature(null);
+  };
+
+  const getDaysLate = (loan: Loan) => {
+    if (loan.status !== LoanStatus.DISBURSED) return 0;
+    const today = new Date();
+    const currentDay = today.getDate();
+    const dueDate = 27;
+    return currentDay > dueDate ? (currentDay - dueDate) : 0;
   };
 
   return (
@@ -108,11 +111,6 @@ const UserLoansView: React.FC<UserLoansViewProps> = ({ user, loans, budget, onCr
                 </button>
               ))}
             </div>
-            {isLimitedBySystem && (
-              <p className="text-[8px] text-orange-500 font-black uppercase text-center mt-4 tracking-widest opacity-80 italic">
-                Một số gói vay bị khóa do nguồn vốn hệ thống hạn chế
-              </p>
-            )}
           </div>
 
           {amount > 0 && (
@@ -137,22 +135,20 @@ const UserLoansView: React.FC<UserLoansViewProps> = ({ user, loans, budget, onCr
 
                   <section>
                     <p className="font-black text-black uppercase mb-1 border-l-4 border-[#FF8C1A] pl-2">ĐIỀU 2: SỐ TIỀN & THỜI HẠN</p>
-                    <p className="pl-3">Số tiền vay: <span className="font-bold">{FORMAT_CURRENCY(amount)}</span>. Hạn thanh toán: Ngày 27 hàng tháng thông qua hệ thống quản lý VNV.</p>
+                    <p className="pl-3">Số tiền vay: <span className="font-bold">{FORMAT_CURRENCY(amount)}</span>. Hạn thanh toán: Ngày 27 hàng tháng.</p>
                   </section>
                   
                   <section>
-                    <p className="font-black text-red-600 uppercase mb-1 border-l-4 border-red-600 pl-2">ĐIỀU 3: PHÍ PHẠT TRỄ HẠN</p>
-                    <p className="pl-3 italic">Mức phí phạt là 0.1%/ngày tính trên tổng dư nợ cho đến khi nghĩa vụ được hoàn thành đầy đủ.</p>
+                    <p className="font-black text-red-600 uppercase mb-1 border-l-4 border-red-600 pl-2">ĐIỀU 3: PHÍ PHẠT CHẬM TRẢ</p>
+                    <p className="pl-3 italic leading-relaxed">
+                      Phí phạt là <span className="font-bold">0.1%/ngày</span> tính trên dư nợ gốc. <br/>
+                      <span className="font-black">Lưu ý:</span> Tổng phí phạt không vượt quá <span className="font-bold text-red-600">30%</span> giá trị khoản vay ban đầu.
+                    </p>
                   </section>
                   
                   <section>
                     <p className="font-black text-black uppercase mb-1 border-l-4 border-[#FF8C1A] pl-2">ĐIỀU 4: NGHĨA VỤ HOÀN TRẢ</p>
                     <p className="pl-3">Bên B cam kết hoàn trả đầy đủ đúng hạn. Trễ hạn ảnh hưởng trực tiếp tới điểm tín dụng và quyền lợi nâng hạng.</p>
-                  </section>
-
-                  <section>
-                    <p className="font-black text-black uppercase mb-1 border-l-4 border-[#FF8C1A] pl-2">ĐIỀU 5: NGHĨA VỤ TÀI SẢN</p>
-                    <p className="pl-3">VNV Money có toàn quyền thực hiện các biện pháp thu hồi nợ thông qua các tài sản định danh khi Bên B vi phạm Điều 4.</p>
                   </section>
                </div>
                
@@ -187,17 +183,41 @@ const UserLoansView: React.FC<UserLoansViewProps> = ({ user, loans, budget, onCr
           {loans.length === 0 ? (
             <div className="text-center py-20 bg-[#1A1A1A] rounded-[2.5rem] border border-dashed border-gray-800 text-gray-700 font-black text-[10px] uppercase tracking-widest">Chưa có giao dịch phát sinh</div>
           ) : (
-            [...loans].sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()).map(loan => (
-              <div key={loan.id} className="bg-[#1A1A1A] p-6 rounded-[2.5rem] border border-gray-800 flex justify-between items-center shadow-md">
-                <div>
-                  <p className="text-[9px] text-gray-600 font-black uppercase mb-1 tracking-widest">{loan.id}</p>
-                  <p className="text-xl font-black text-white">{FORMAT_CURRENCY(loan.amount)}</p>
+            [...loans].sort((a,b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()).map(loan => {
+              const daysLate = getDaysLate(loan);
+              const maxFine = loan.amount * 0.3;
+              const isMaxFine = loan.accruedFine >= maxFine;
+
+              return (
+                <div key={loan.id} className="bg-[#1A1A1A] p-6 rounded-[2.5rem] border border-gray-800 space-y-4 shadow-md">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-[9px] text-gray-600 font-black uppercase mb-1 tracking-widest">{loan.id}</p>
+                      <p className="text-xl font-black text-white">{FORMAT_CURRENCY(loan.amount)}</p>
+                    </div>
+                    <div className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase border ${loan.status === LoanStatus.SETTLED ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-orange-500 border-orange-500/20 bg-orange-500/5'}`}>
+                      {loan.status}
+                    </div>
+                  </div>
+
+                  {loan.status === LoanStatus.DISBURSED && daysLate > 0 && (
+                    <div className="pt-3 border-t border-gray-800/50 flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                          <Clock size={14} className="text-red-500" />
+                          <p className="text-[9px] font-black text-red-500 uppercase">Trễ {daysLate} ngày</p>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-[8px] text-gray-500 font-black uppercase mb-0.5">Phí phạt (+0.1%/ngày)</p>
+                          <p className="text-xs font-black text-red-500">
+                            {FORMAT_CURRENCY(loan.accruedFine)}
+                            {isMaxFine && <span className="text-[8px] ml-1 opacity-60">(Đã chạm trần 30%)</span>}
+                          </p>
+                       </div>
+                    </div>
+                  )}
                 </div>
-                <div className={`px-4 py-1.5 rounded-xl text-[8px] font-black uppercase border ${loan.status === LoanStatus.SETTLED ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-orange-500 border-orange-500/20 bg-orange-500/5'}`}>
-                  {loan.status}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

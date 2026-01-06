@@ -79,36 +79,73 @@ const App: React.FC = () => {
     const today = new Date();
     const currentDay = today.getDate();
     const dueDate = 27;
+    const isOverdue = currentDay > dueDate;
 
-    setUsers(prevUsers => prevUsers.map(u => {
-      if (u.role === UserRole.ADMIN) return u;
-      const userLoans = loans.filter(l => l.userId === u.id && l.status === LoanStatus.DISBURSED);
-      if (currentDay > dueDate && userLoans.length > 0) {
-        const daysLate = currentDay - dueDate;
-        let newProgress = u.settlementProgress - daysLate;
-        let newTier = u.tier;
-        let newLimit = u.limit;
-        while (newProgress <= 0 && newTier !== UserTier.STANDARD) {
-          const tiers = Object.values(UserTier);
-          const currentIdx = tiers.indexOf(newTier);
-          if (currentIdx > 0) {
-            newTier = tiers[currentIdx - 1];
-            newLimit = TIER_CONFIGS[newTier].maxLimit;
-            newProgress = 10 + newProgress;
-            addAuditLog({fullName: 'Hệ thống', id: 'SYSTEM'}, `CẢNH BÁO: Khách hàng ${u.fullName} bị HẠ HẠNG xuống ${newTier} do trễ hạn.`);
-          } else {
-            newTier = UserTier.STANDARD;
-            newProgress = 0;
-            break;
+    // 1. Cập nhật phí phạt cho các khoản vay đang nợ (DISBURSED)
+    setLoans(prevLoans => {
+      let changed = false;
+      const updatedLoans = prevLoans.map(loan => {
+        if (loan.status === LoanStatus.DISBURSED) {
+          const daysLate = isOverdue ? (currentDay - dueDate) : 0;
+          const dailyRate = 0.001; // 0.1%
+          const maxFineRate = 0.3; // 30% trần
+          
+          const calculatedFine = Math.floor(loan.amount * dailyRate * daysLate);
+          const maxFine = Math.floor(loan.amount * maxFineRate);
+          const finalFine = Math.min(calculatedFine, maxFine);
+
+          if (loan.accruedFine !== finalFine) {
+            changed = true;
+            return { ...loan, accruedFine: finalFine };
           }
         }
-        if (newTier === UserTier.STANDARD) newProgress = Math.max(0, newProgress);
-        if (newTier !== u.tier || newProgress !== u.settlementProgress) {
-          return { ...u, settlementProgress: newProgress, tier: newTier, limit: newLimit };
+        return loan;
+      });
+      return changed ? updatedLoans : prevLoans;
+    });
+
+    // 2. Cập nhật tiến trình hạ cấp/hạng của User nếu trễ hạn
+    setUsers(prevUsers => {
+      let changed = false;
+      const updatedUsers = prevUsers.map(u => {
+        if (u.role === UserRole.ADMIN) return u;
+        const userLoans = loans.filter(l => l.userId === u.id && l.status === LoanStatus.DISBURSED);
+        
+        if (isOverdue && userLoans.length > 0) {
+          const daysLate = currentDay - dueDate;
+          let newProgress = u.settlementProgress - daysLate;
+          let newTier = u.tier;
+          let newLimit = u.limit;
+          
+          let tierChanged = false;
+          while (newProgress <= 0 && newTier !== UserTier.STANDARD) {
+            const tiers = Object.values(UserTier);
+            const currentIdx = tiers.indexOf(newTier);
+            if (currentIdx > 0) {
+              newTier = tiers[currentIdx - 1];
+              newLimit = TIER_CONFIGS[newTier].maxLimit;
+              newProgress = 10 + newProgress;
+              tierChanged = true;
+            } else {
+              newTier = UserTier.STANDARD;
+              newProgress = 0;
+              break;
+            }
+          }
+          if (newTier === UserTier.STANDARD) newProgress = Math.max(0, newProgress);
+          
+          if (newTier !== u.tier || newProgress !== u.settlementProgress) {
+            changed = true;
+            if (tierChanged) {
+               addAuditLog({fullName: 'Hệ thống', id: 'SYSTEM'}, `CẢNH BÁO: Khách hàng ${u.fullName} bị HẠ HẠNG xuống ${newTier} do trễ hạn quá lâu.`);
+            }
+            return { ...u, settlementProgress: newProgress, tier: newTier, limit: newLimit };
+          }
         }
-      }
-      return u;
-    }));
+        return u;
+      });
+      return changed ? updatedUsers : prevUsers;
+    });
   }, [loans]);
 
   useEffect(() => {
@@ -198,20 +235,14 @@ const App: React.FC = () => {
 
   const handleResetSystem = () => { 
     isResetting.current = true; 
-    
-    // Clear State ngay lập tức để tránh bất kỳ useEffect nào lưu đè dữ liệu cũ
     setUsers([]);
     setLoans([]);
     setTierRequests([]);
     setAuditLogs([]);
     setBudget(INITIAL_SYSTEM_BUDGET);
-    
-    // Xóa Storage
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(AUTH_KEY);
-    localStorage.clear(); // Xóa sạch tất cả các dữ liệu khác nếu có
-    
-    // Ép trình duyệt tải lại từ URL gốc
+    localStorage.clear(); 
     setTimeout(() => {
       window.location.href = window.location.origin + window.location.pathname;
     }, 100);
